@@ -14,16 +14,17 @@ Nothing from the game is in here. No ROM, no keys, no built app. You need your o
 
 | Metric | This machine |
 |---|---|
-| Race, mean frame time | 21.4 ms (46.7 fps) |
-| Race, 95th percentile | 38.6 ms |
-| GPU, mean of the per-window medians | 13.0 ms |
-| Dropped frames, per 300 | 101 mean, 58 best, 138 worst |
+| Race, mean frame time | 18.1 ms (55.2 fps) |
+| Race, 95th percentile | 30.8 ms |
+| GPU, mean of the per-window medians | 11.4 ms |
+| Dropped frames, per 300 | 50 mean, 24 best, 90 worst |
 | Menus | 60 fps, one window with 1 dropped of 300 |
-| Footprint | 4.3 to 4.5 GB while racing |
+| Footprint | 3.8 to 4.7 GB while racing |
 | Render | 1920x1080, upscaled to the window by MetalFX |
 
-One playthrough of Mario Bros. Circuit, first race. On the 1.0.0 dump the same course ran at 32.5 fps at 1080p, or 47.5 fps
-once the 3D was dropped to 1440x810. 1.8.0 gets that frame rate at full size, which is why the render scale control this
+Two runs of Mario Bros. Circuit on 1.8.0: 46.7 fps on the first, when the pipeline cache was empty, and 55.2 on the second,
+with 947 pipelines already in it. On the 1.0.0 dump the same course ran at 32.5 fps at 1080p, or 47.5 fps
+once the 3D was dropped to 1440x810. 1.8.0 passes both at full size, which is why the render scale control this
 repository added for 1.0.0 is not needed any more, and not offered on 1.8.0 at all.
 [PERFORMANCE.md](PERFORMANCE.md) has the runs, the stutters and what is still unmeasured.
 
@@ -133,8 +134,8 @@ when frames ran long, the game stretched its own clock, so the counter held whil
 about 52 fps in a race at 1080p, 4.4 GB. That is the build the render scale and the 1.0.0 measurements belong to.
 
 **This one.** The refresh onto nxnative main `4b10c73f`, 245 commits further on, plus the render scale stub, the pipeline
-archive in the build and 1.8.0's build registration. 1.8.0 at full 1920x1080 runs the same course as the third build did at
-1440x810: 46.7 fps against 47.5, at a sharper size. [REFRESH.md](REFRESH.md) has what the refresh took from upstream, what
+archive in the build and 1.8.0's build registration. 1.8.0 at full 1920x1080 runs the same course at 55.2 fps, against the third
+build's 47.5 at 1440x810: eight frames ahead, at a sharper size. [REFRESH.md](REFRESH.md) has what the refresh took from upstream, what
 it deliberately did not take, and why.
 
 ## Credits
