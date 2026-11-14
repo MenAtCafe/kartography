@@ -1,8 +1,8 @@
-# This branch: the refresh onto current nxnative main
+# The refresh onto nxnative main
 
-main is the build that was measured. This branch is the same port on a newer engine: nxnative main
-`4b10c73f` (14 November 2026), 245 commits past the `c4ffb9df` main was built on. It has now been run:
-three races on Mario Bros. Circuit, in PERFORMANCE.md. What follows is what changed underneath and what came out.
+This was a branch, and it is `main` now. It moved the port from nxnative main `c4ffb9df` to `4b10c73f`, 245 commits, and
+added the render scale stub taken from plumber-racer-2. The build it produced has since been rebuilt on the 1.8.0 update,
+which is what the numbers in PERFORMANCE.md are about. What follows is what changed underneath, and what came out.
 
 ## What upstream does now, so this branch carries none of it
 

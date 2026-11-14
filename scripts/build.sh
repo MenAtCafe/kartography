@@ -10,7 +10,7 @@ OUT="${OUT:-$HOME/Documents/Mario Kart World.app}"
 WORK="${WORK:-$HOME/Documents/mkw-build}"
 ENVFILE="${ENVFILE:-$ROOT/assets/env.txt}"
 ICON="${ICON:-$ROOT/assets/AppIcon.png}"
-PACKAGE="${PACKAGE:-}"
+PACKAGE="${PACKAGE:-v917504}"   # Mario Kart World 1.8.0: PACKAGE=v0 packs another version
 GPU="${GPU:-}"   # the pipeline archive's GPU, default this Mac's; none skips the archive
 [ -n "$DUMP" ] || { echo "set DUMP= to your game dump, or put it in scripts/local.conf" >&2; exit 1; }
 [ -e "$DUMP" ] || { echo "no game at $DUMP" >&2; exit 1; }
