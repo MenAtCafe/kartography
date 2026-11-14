@@ -30,7 +30,7 @@ reimplemented in plain C, and the game's NVN2 rendering calls are translated int
 
 The engine is [nxnative](https://github.com/seedds/nxnative) by seedds. This repository is the Mario Kart World port on
 top of it: its profile, the fixes this game needs, a one-command build, and the measurements that turned a stuttering
-30 fps into 55.
+30 fps into almost 60.
 
 ## Performance
 
