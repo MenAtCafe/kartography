@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/kartography.png" width="180" alt="Kartography">
+  <img src="assets/kartography-icon.png" width="180" alt="Kartography">
 </p>
 
 <h1 align="center">Kartography</h1>
