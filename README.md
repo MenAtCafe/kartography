@@ -91,8 +91,8 @@ DUMP="/path/to/your/mario-kart-world.nup" scripts/build.sh
 ```
 
 About 45 minutes the first time, most of it translating 11,603 shaders and building the pipeline archive. About five
-minutes after that, because the caches are reused. The app lands in `~/Documents/Switch 2 Files/Mario Kart World.app` with
-the settings, the keyboard map and the icon already inside it.
+minutes after that, because the caches are reused. The app lands at `OUT`, `~/Documents/Mario Kart World.app` by default, with the
+settings, the keyboard map and the icon already inside it.
 
 `scripts/build.sh` packs 1.8.0 by default (`PACKAGE=v0` for another version). `DUMP`, `OUT`, `WORK` and the rest can
 live in `scripts/local.conf`, which is not tracked. A build started without a terminal writes its console to
