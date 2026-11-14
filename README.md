@@ -34,20 +34,22 @@ top of it: its profile, the fixes this game needs, a one-command build, and the 
 
 ## Performance
 
-One course, Mario Bros. Circuit, two runs on the same build:
+One course, Mario Bros. Circuit, three runs on the same build:
 
-| | Second run | First run |
-|---|---|---|
-| Race, mean frame time | **18.1 ms** | 21.4 ms |
-| That is | **55.2 fps** | 46.7 fps |
-| 95th percentile | **30.8 ms** | 38.6 ms |
-| GPU p50 | **11.4 ms** | 13.0 ms |
-| Dropped frames per 300 | **50** | 101 |
-| Footprint | 3.8 to 4.7 GB | 4.3 to 4.5 GB |
+| | Third run | Second run | First run |
+|---|---|---|---|
+| Race, mean frame time | **17.2 ms** | 18.1 ms | 21.4 ms |
+| That is | **58.3 fps** | 55.2 fps | 46.7 fps |
+| 95th percentile | **30.9 ms** | 30.8 ms | 38.6 ms |
+| GPU p50 | **10.5 ms** | 11.4 ms | 13.0 ms |
+| Dropped frames per 300 | **29** | 50 | 101 |
+| Footprint | 3.5 to 4.6 GB | 3.8 to 4.7 GB | 4.3 to 4.5 GB |
+| Pipelines cached at start | **1,283** | 947 | 0 |
 
-At full 1920x1080 with MetalFX scaling to the window. The difference between the two runs is the pipeline cache: the
-first had none, the second had 947 pipelines in it. [PERFORMANCE.md](PERFORMANCE.md) has the windows, the stutters, the
-comparison against the 1.0.0 dump, and an honest list of what is still unmeasured.
+At full 1920x1080 with MetalFX scaling to the window. The difference between the three is the pipeline cache, and nothing
+else: the first had none and compiled its way round the course, the third had 1,283 pipelines in it and compiled nothing
+for the first six windows of the race. [PERFORMANCE.md](PERFORMANCE.md) has the windows, the stutters, the comparison
+against the 1.0.0 dump, and an honest list of what is still unmeasured.
 
 ## How it works
 
