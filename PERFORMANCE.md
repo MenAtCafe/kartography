@@ -22,7 +22,8 @@ now that the port is in good shape.
 | Footprint | 3.8 to 4.7 GB | 4.3 to 4.5 GB |
 | Queue replay thread | **11.00 ms at 1.61 GHz** | 12.61 ms at 1.44 GHz |
 
-The difference between the two runs is not the build. It is the pipeline cache.
+Most of the gap is not the build. It is the pipeline cache, plus a clock that ran 1.44 GHz on the first run and 1.61 on the
+second.
 
 ## The cache, and why the second run is faster
 
@@ -40,7 +41,7 @@ because the log counts bases compiled in each 300-frame window:
 |---|---|---|---|---|---|---|---|---|---|
 | Bases compiled | 15 | 28 | 23 | 36 | 12 | 7 | 0 | 0 | 8 |
 
-The first third of the race is still hiring, 25 to 36 bases every five seconds. By the last third it is idle, then it wakes
+The first third of the race is still building, 25 to 36 bases every five seconds. By the last third it is idle, then it wakes
 up for eight more when the track shows something new. Every run moves that frontier forward, and the frame time follows it:
 the early windows sit at 17.4 ms with 33 frames dropped, the late ones at 17.0 to 18.6 with 24 to 40.
 
@@ -57,8 +58,8 @@ Same course, same machine.
 | 1.0.0, render scale 0.75 | 1440x810 | 21.1 ms, 47.5 fps | 12.0 ms | 96 |
 | **1.8.0, second run** | **1920x1080** | **18.1 ms, 55.2 fps** | **11.4 ms** | **50** |
 
-Read that table twice. 1.8.0 at full resolution is nearly seventeen frames ahead of the best the 1.0.0 dump could do at the
-same size, and eight ahead of what 1.0.0 needed a 25 percent resolution cut to reach.
+Read that table twice. 1.8.0 at full resolution is twenty-two frames ahead of the best the 1.0.0 dump could do at the same
+size, and eight ahead of what 1.0.0 needed a 25 percent resolution cut to reach.
 
 The render scale control this repository built for 1.0.0 is therefore unused on 1.8.0, and not offered: its stub is
 registered against 1.0.0's `main`. The update did the job the control was invented for.
@@ -98,7 +99,7 @@ the picture is correct.
 once. A shader samples a texture as a different kind than what is bound, the draw still goes out, so the thing to watch for
 is one odd-looking surface.
 
-Both appeared in both runs and neither correlates with a dropped frame.
+Both appeared once in each run, and neither shows up in the long-frame lines.
 
 ## One shader out of 11,603
 
@@ -114,7 +115,7 @@ profile's: handheld renders 1920x1080 rather than a docked 2560x1440, and MetalF
 `DM_FPS_HOLD=off` keeps late frames from being given an extra vsync, which on the 1.0.0 dump was worth about 14 fps by itself.
 
 The app also carries 776.8 MB of pipelines built at build time for this GPU: 9,591 render, 728 compute, none failed. That is
-why a first race at all compiles dozens rather than thousands.
+why a first race compiles dozens rather than thousands.
 
 ## Heat
 
@@ -124,11 +125,13 @@ surface, short sessions, lid open to cool.
 
 ## What is not measured
 
-- A second course, so whether Mario Bros. Circuit is typical is unknown.
-- A cool machine against a warm one, which is the only way to separate 1.8.0's gains from the clock's.
-- Whether the 300 ms stalls are the game, the host, or the guest files being paged.
-- Which course or effect asks for the shader that did not translate.
-- What the texture type mismatch draws.
+- **Cold against warm.** Every run so far came after a long session. Nothing here separates 1.8.0's gains from the clock's, and
+  a run on a cold machine could be several frames higher.
+- **Another course.** Mario Bros. Circuit is the first track in the game and quite possibly the lightest. A 24-kart race on a
+  heavier one is the number that would matter.
+- **The 300 ms stalls.** Which thread, and whether the guest files are being paged at that moment.
+- **The missing shader.** Which course or effect asks for the one that did not translate.
+- **The texture type mismatch.** What it draws, and whether it is visible at all.
 
 ## Words used here
 
