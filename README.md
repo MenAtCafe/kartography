@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/AppIcon.png" width="120" alt="">
+  <img src="assets/kartography.png" width="180" alt="Kartography">
 </p>
 
 <h1 align="center">Kartography</h1>
@@ -87,7 +87,7 @@ Because the same instruction set is on both ends, nothing simulates a CPU. That 
 git clone git@github.com:MenAtCafe/kartography.git
 cd kartography
 
-DUMP="/path/to/Mario Kart World + Update 1.8.0.nup" scripts/build.sh
+DUMP="/path/to/your/mario-kart-world.nup" scripts/build.sh
 ```
 
 About 45 minutes the first time, most of it translating 11,603 shaders and building the pipeline archive. About five
@@ -118,6 +118,8 @@ they survive rebuilds and version changes; the log is in `~/Library/Logs/nxnativ
 | F H | click sticks | Shift + arrow | right stick |
 | = - | + - | Space | shake |
 
+**Drift is O.** O is ZR, the button you hold to hop and drift; Q beside it is ZL, and E and U are L and R.
+
 The map is data, not code. [keyboard-layout.md](keyboard-layout.md) documents the format, and `assets/env.txt` is the
 shipped layout.
 
@@ -131,7 +133,7 @@ shipped layout.
 | `dm/tools/` | the rewriter that makes the binaries run on Apple's kernel |
 | `scripts/` | `build.sh`, `play.sh`, `build_ipa_from_nsp.py` |
 | `docs/` | the engine's reference notes, symptom index and subsystem guides |
-| `assets/` | the icon and the shipped environment |
+| `assets/` | the project art and its `.icns`, the app icon, the shipped environment |
 
 ## Limitations
 
