@@ -1,149 +1,156 @@
-# Mario Kart World on an 8 GB Mac
+<p align="center">
+  <img src="assets/AppIcon.png" width="120" alt="">
+</p>
 
-Mario Kart World, the Switch 2 game, running natively on a MacBook Neo: Apple A18 Pro, 8 GB of unified memory, macOS 27.
-There is no emulator here. The game's own ARM64 code runs, Horizon's services are reimplemented under it and NVN2 is
-translated to Metal, which is what [nxnative](https://github.com/seedds/nxnative) does.
+<h1 align="center">Kartography</h1>
 
-This build is Mario Kart World **1.8.0** (v917504), packed from a 1.8.0 NUP with nxnative main `4b10c73f` and the changes
-below. The 1.0.0 dump is still what the profile's shader tables were made from, so 1.8.0 is packed from a profile derived
-from it, with its own shaders.
+<p align="center"><em>Mario Kart World, running natively on an 8 GB Mac. No emulator, no JIT.</em></p>
 
-Nothing from the game is in here. No ROM, no keys, no built app. You need your own copy of the game to build it.
+<p align="center">
+  <a href="PERFORMANCE.md">Performance</a> ·
+  <a href="#build">Build</a> ·
+  <a href="#how-to-play">How to play</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#limitations">Limitations</a>
+</p>
 
-## What it does here
+<p align="center">
+  <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue.svg">
+  <img alt="platform macOS arm64" src="https://img.shields.io/badge/platform-macOS%20arm64-lightgrey.svg">
+  <img alt="game version 1.8.0" src="https://img.shields.io/badge/game-1.8.0-informational.svg">
+</p>
 
-| Metric | This machine |
-|---|---|
-| Race, mean frame time | 18.1 ms (55.2 fps) |
-| Race, 95th percentile | 30.8 ms |
-| GPU, mean of the per-window medians | 11.4 ms |
-| Dropped frames, per 300 | 50 mean, 24 best, 90 worst |
-| Menus | 60 fps, one window with 1 dropped of 300 |
-| Footprint | 3.8 to 4.7 GB while racing |
-| Render | 1920x1080, upscaled to the window by MetalFX |
+---
 
-Two runs of Mario Bros. Circuit on 1.8.0: 46.7 fps on the first, when the pipeline cache was empty, and 55.2 on the second,
-with 947 pipelines already in it. On the 1.0.0 dump the same course ran at 32.5 fps at 1080p, or 47.5 fps
-once the 3D was dropped to 1440x810. 1.8.0 passes both at full size, which is why the render scale control this
-repository added for 1.0.0 is not needed any more, and not offered on 1.8.0 at all.
-[PERFORMANCE.md](PERFORMANCE.md) has the runs, the stutters and what is still unmeasured.
+## What this is
 
-## What this repository adds to nxnative
+Kartography runs Mario Kart World **1.8.0** on Apple silicon as a native program. The game's own ARM64 code executes
+directly on your chip. What sits underneath it is not a console and not a virtual machine: Horizon's services are
+reimplemented in plain C, and the game's NVN2 rendering calls are translated into Metal before they reach the GPU.
 
-**A keyboard map, `DM_KBD_MAP`, in `dm/host/pad_kbd.h`.** The Mac layout is J K U I for A B X Y and nothing for the camera,
-which is unusable without a controller. The map is data, 25 actions, and it is the change we sent upstream as
-[PR #1535](https://github.com/seedds/nxnative/pull/1535). See [keyboard-layout.md](keyboard-layout.md).
+The engine is [nxnative](https://github.com/seedds/nxnative) by seedds. This repository is the Mario Kart World port on
+top of it: its profile, the fixes this game needs, a one-command build, and the measurements that turned a stuttering
+30 fps into 55.
 
-**1.8.0's build is registered** in `dm/games/0400C3F00006E000/game.tsv`, so the update packs with this profile's settings and
-every fix for its builds instead of as an unknown version. Upstream's row, from [PR #2621](https://github.com/seedds/nxnative/pull/2621).
+## Performance
 
-**Packaged textures upload on the CPU when the guest memory is in files.** A no-copy Metal buffer over file pages is read
-into memory and wired when it enters the residency set. `DM_GUEST_FILE_CPU_UP=0` turns that gate off, to compare with
-upstream's buffer path.
+One course, Mario Bros. Circuit, two runs on the same build:
 
-**A render scale stub for the 1.0.0 build** in `patches.py`, which multiplies the six 3D entries of the game's resolution
-table and leaves the HUD alone. It is registered against 1.0.0's `main`, so 1.8.0 does not get it.
+| | Second run | First run |
+|---|---|---|
+| Race, mean frame time | **18.1 ms** | 21.4 ms |
+| That is | **55.2 fps** | 46.7 fps |
+| 95th percentile | **30.8 ms** | 38.6 ms |
+| GPU p50 | **11.4 ms** | 13.0 ms |
+| Dropped frames per 300 | **50** | 101 |
+| Footprint | 3.8 to 4.7 GB | 4.3 to 4.5 GB |
 
-**A profile fitted to this machine**: `mem_map_limit on`, handheld mode, and `fps_target 60`.
+At full 1920x1080 with MetalFX scaling to the window. The difference between the two runs is the pipeline cache: the
+first had none, the second had 947 pipelines in it. [PERFORMANCE.md](PERFORMANCE.md) has the windows, the stutters, the
+comparison against the 1.0.0 dump, and an honest list of what is still unmeasured.
 
-**A squircle icon**, through `MAC_ICON` in `dm/mac/pack_app.py`, instead of the game's own icon.
+## How it works
 
-**One-command build and play**: `scripts/build.sh` bakes the settings, the icon and the pipeline archive and drops the bundle
-seal; `scripts/play.sh` launches the app. `DM_FPS_HOLD=off` is part of the build because it is what made the race feel steady.
+Three layers, stacked:
 
-`tex_soft` is off in this profile. Our 1.0.0 build found one level down tiles Mario Kart World's terrain UVs wrongly, since its
-terrain shaders read a texture's size to lay out those UVs; plumber-racer-2 runs it on and reports no broken textures.
-Untested here, and not needed: the footprint is already 4.4 GB.
+1. **The game, patched.** The binary is rewritten only where it insists on Nintendo's kernel: thread-local storage, SVCs,
+   timers, the memory ordering Apple's cores require.
+2. **A reimplemented operating system.** Horizon's file system, memory pools, HID, audio, save transactions and the SDK
+   services the game calls, answered by the host.
+3. **A reimplemented graphics driver.** NVN2 objects and commands become Metal. Shaders are translated ahead of time, not
+   at runtime, which is what makes this viable where a JIT would not be.
 
-## How to play
+Because the same instruction set is on both ends, nothing simulates a CPU. That is the line between this and an emulator.
 
-Build the app, then double-click it or run `scripts/play.sh`. Hold **Option** at launch for the launcher: frame-rate cap,
-hold, console mode, upscaling and language. There is no Render scale row on 1.8.0. [docs/playing.md](docs/playing.md) has
-every switch and the controller notes.
+## What this repository adds
 
-| Key | Pad |
-|---|---|
-| C X V Z | A B X Y |
-| Q O | ZL ZR |
-| E U | L R |
-| F H | click left / right stick |
-| WASD | left stick |
-| I J K L | right stick (camera) |
-| arrows | D-pad |
-| Shift with an arrow | the same direction on the right stick |
-| = - | + - |
-| Space | shake |
+- **A keyboard map.** `DM_KBD_MAP` and nothing hardcoded: 25 actions, one line, sent upstream as
+  [PR #1535](https://github.com/seedds/nxnative/pull/1535).
+- **1.8.0's build registered** in the game profile, so the update packs with this profile's settings and every fix for its
+  builds rather than as an unknown version.
+- **Guest memory in files.** The 72.5 GB guest block lives in 73 sparse, unlinked 1 GB files, out of the footprint, which is
+  what makes an 8 GB machine viable.
+- **A CPU upload gate**, with `DM_GUEST_FILE_CPU_UP=0` to compare against the GPU path.
+- **A pipeline archive built at build time** for this Mac's GPU: 9,591 render pipelines and 728 compute ones, so a first
+  race compiles dozens rather than thousands.
+- **One-command build and play**, with the settings, the icon and the seal handling baked in.
 
-That is what `assets/env.txt` bakes in. Without it the default is Nintendo's layout, which is J K U I for A B X Y and no
-camera at all; [keyboard-layout.md](keyboard-layout.md) has the map format, so a layout of your own is one line.
+## Requirements
 
-## Building
+- An Apple silicon Mac. Measured on a MacBook Neo: A18 Pro, 8 GB, macOS 27.2.
+- Xcode 27.2, Homebrew, an arm64 Python 3.12, and the toolchain nxnative lists.
+- **Your own Mario Kart World 1.8.0 NUP.** No game files are in this repository, no keys either.
 
-You need the game's **1.8.0** NUP (a `.nup` holding the base game and its update, or a folder dump with `base/` and
-`updates/`), Xcode 27.2, Homebrew, an arm64 Python 3.12 and the toolchain nxnative lists. Then:
+## Build
 
 ```sh
+git clone git@github.com:MenAtCafe/kartography.git
+cd kartography
+
 DUMP="/path/to/Mario Kart World + Update 1.8.0.nup" scripts/build.sh
 ```
 
-`scripts/build.sh` packs v917504 by default; `PACKAGE=v0` packs another version if your dump has one.
+About 45 minutes the first time, most of it translating 11,603 shaders and building the pipeline archive. About five
+minutes after that, because the caches are reused. The app lands in `~/Documents/Switch 2 Files/Mario Kart World.app` with
+the settings, the keyboard map and the icon already inside it.
 
-The first build is the long one, about 45 minutes: the shader split walks the whole RomFS and all 11,603 of 1.8.0's
-shaders are translated and compiled, then the Mac host, the pipeline archive (about 9 minutes) and the app. Later builds
-of the same version reuse the caches and take about five minutes.
+`scripts/build.sh` packs 1.8.0 by default (`PACKAGE=v0` for another version). `DUMP`, `OUT`, `WORK` and the rest can
+live in `scripts/local.conf`, which is not tracked. A build started without a terminal writes its console to
+`$WORK/build.log`.
 
-The pipeline archive is made for this Mac's GPU and carried in the app, so its first start opens it instead of compiling
-its way through a course: 776.8 MB, 9,591 render pipelines and 728 compute ones when this was written. `GPU=none` skips it.
-`--no-prebake` drops the pipelines the archive leaves to the device.
-
-`DUMP` has no default on purpose: it is your path, never the repository one. `OUT` and `WORK` default to `~/Documents`, and
-all of them can come from `scripts/local.conf`, which is not tracked. `DM_GUEST_FILE` needs about 10 GB free on the temp volume
-(a 2 GB floor plus 8 GB, since a Mac can swap); without it the game falls back to anonymous memory and the footprint
-climbs to 8 GB. A build started without a terminal writes its console to `$WORK/build.log`.
-
-## Running
+## How to play
 
 ```sh
 scripts/play.sh
 ```
 
-Double-click the app, or run the script if you want a terminal. The host keys its save, its pipeline cache and its temp
-files by title ID, in `~/Library/Application Support/nxnative/0400C3F00006E000/`; the log is at
-`~/Library/Logs/nxnative/0400C3F00006E000.log`. The save is the same one the 1.0.0 build used, because it is keyed by title ID
-rather than by version.
+Or double-click the app. Hold **Option** at launch for the launcher: frame-rate cap, console mode, upscaling, language.
+The save and the pipeline cache live in `~/Library/Application Support/nxnative/0400C3F00006E000/`, keyed by title ID, so
+they survive rebuilds and version changes; the log is in `~/Library/Logs/nxnative/`.
 
-## Measurements
+### Controls
 
-[PERFORMANCE.md](PERFORMANCE.md) has the 1.8.0 numbers, the comparison against the 1.0.0 dump, the stutters and what is
-still unmeasured.
+| Key | Pad | Key | Pad |
+|---|---|---|---|
+| C X V Z | A B X Y | WASD | left stick |
+| Q O | ZL ZR | I J K L | right stick |
+| E U | L R | arrows | D-pad |
+| F H | click sticks | Shift + arrow | right stick |
+| = - | + - | Space | shake |
 
-## Where this came from
+The map is data, not code. [keyboard-layout.md](keyboard-layout.md) documents the format, and `assets/env.txt` is the
+shipped layout.
 
-Four builds, two weeks.
+## Project layout
 
-**The first, early November 2026.** A fork of [plumber-racer-2](https://github.com/cheemu21/plumber-racer-2), itself a port
-of nxnative to this game. It carried the memory work that first got Mario Kart World running on an 8 GB laptop: the guest
-memory in a file mapping, texture levels dropped to save space, tiles released once uploaded, and a cap on how much memory
-the game could map. 40 to 57 fps, 4.48 GB footprint, at 1.0.0.
+| Path | What lives there |
+|---|---|
+| `dm/games/0400C3F00006E000/` | the game's profile: settings, shader tables, rewriter patches |
+| `dm/gfx/nvn/` | NVN2 on Metal: textures, pipelines, present pacing, shaders |
+| `dm/host/` | Horizon's services, threads, memory, input, and the Mac front end |
+| `dm/tools/` | the rewriter that makes the binaries run on Apple's kernel |
+| `scripts/` | `build.sh`, `play.sh`, `build_ipa_from_nsp.py` |
+| `docs/` | the engine's reference notes, symptom index and subsystem guides |
+| `assets/` | the icon and the shipped environment |
 
-**The second, a week later.** 3.7 to 4.0 GB, 0 to 10 dropped frames of 300 on a warm course, a bundled pipeline archive,
-and the keyboard map, the texture gate and the profile work. It reported 60 fps in races, which was true in a narrow sense:
-when frames ran long, the game stretched its own clock, so the counter held while the world slowed.
+## Limitations
 
-**The third.** nxnative main `c4ffb9df`, which carries `DM_GUEST_FILE` and the host frame step for this game. 1.000 real speed,
-about 52 fps in a race at 1080p, 4.4 GB. That is the build the render scale and the 1.0.0 measurements belong to.
+- **One course measured.** Mario Bros. Circuit, first track in the game. Heavier tracks are untested.
+- **One shader does not translate.** 11,602 of 11,603 compile; the missing one uses an Ampere instruction that is not
+  implemented yet.
+- **Two diagnostics repeat once per run**, a slow-path texture upload and one texture type mismatch. Neither has cost a
+  frame that we can see.
+- **Some frames stall for no accounted reason.** 300 to 400 ms with no pipeline, no upload and no GPU time inside them.
+  Open.
+- **No online, no local wireless, no GameChat.** Single player and same-machine multiplayer only.
+- **It gets smoother as you play.** Pipelines compile on first sight and are kept.
 
-**This one.** The refresh onto nxnative main `4b10c73f`, 245 commits further on, plus the render scale stub, the pipeline
-archive in the build and 1.8.0's build registration. 1.8.0 at full 1920x1080 runs the same course at 55.2 fps, against the third
-build's 47.5 at 1440x810: eight frames ahead, at a sharper size. [REFRESH.md](REFRESH.md) has what the refresh took from upstream, what
-it deliberately did not take, and why.
+## Credits and license
 
-## Credits
+The engine is [nxnative](https://github.com/seedds/nxnative) by seedds, MIT licensed, and this repository carries that
+license. The port started from [plumber-racer-2](https://github.com/cheemu21/plumber-racer-2), a Mario Kart World bring-up
+whose memory work this builds on. Shader translation draws on Ryujinx and SPIRV-Cross; packing uses LibHac. The keyboard
+map, the profile, the upload gate and the measurements are ours.
 
-The engine is [nxnative](https://github.com/seedds/nxnative) by seedds. This port started from
-[plumber-racer-2](https://github.com/cheemu21/plumber-racer-2), a Mario Kart World port of nxnative whose bring-up and
-memory work this build builds on; the render scale stub is its find, re-ported here. The keyboard map, the texture upload
-gate, the profile changes and the measurements are ours. Ryujinx, LibHac, SPIRV-Cross and MacNativeGames are in that stack
-too.
-
-No game files, no keys, no built application. The project is not affiliated with Nintendo.
+Mario Kart World is a trademark of Nintendo. This project ships no game code, no keys and no assets from the game, and is
+not affiliated with or endorsed by Nintendo.
