@@ -1,14 +1,47 @@
 # Performance
 
-Mario Kart World 1.8.0 (v917504) on a MacBook Neo: Apple A18 Pro, 8 GB of unified memory, macOS 27.2. The build is this
-repository's `main`, nxnative main `4b10c73f` plus the changes in the README, packed from a 1.8.0 NUP with the pipeline
-archive made for this Mac.
+Mario Kart World 1.8.0 (v917504) on a MacBook Neo: Apple A18 Pro, 8 GB of unified memory, macOS 27.2. repository's `main`: nxnative main `c22f30a3` plus the changes in the README, packed from a 1.8.0 NUP with the
+pipeline archive made for this Mac.
 
 Three runs on 1.8.0 and, for comparison, three on the 1.0.0 dump. One course, Mario Bros. Circuit, raced once per run. This
 is not a benchmark suite. It is a laptop playing a console game, measured honestly, and it is the best evidence there is
 right now that the port is in good shape.
 
-## The headline
+## 18 November: the refresh onto nxnative main
+
+The build above was measured on 14 November, on nxnative main `4b10c73f`. The repository has since been brought onto
+nxnative main `c22f30a3`, 254 commits later, and measured again on the same Neo and the same course.
+
+Three runs of Mario Bros. Circuit, one race each, with the app's own settings. Between them only the settings changed:
+
+| | First run, the defaults as they were | Second run, upload gate off | **Third run, gate and keeper off** |
+|---|---:|---:|---:|
+| Session mean | 44.1 fps | 47.2 fps | **52.2 fps** |
+| After the menus, mean | 42.4 fps | 47.1 fps | **52.6 fps** |
+| Five-second windows, median | about 43 fps | about 47.5 fps | **53.1 fps, best 60** |
+| Frames over 100 ms | 178 | 103 | **49** |
+| Median long frame | 41.3 ms | 36.8 ms | **29.7 ms** |
+| Display ticks spent holding | 29% | 22% | **12%** |
+| Peak footprint | 4.50 GB | 4.53 GB | **4.49 GB** |
+
+The method differs from the 14 November table and the two do not compare directly: those were means over 300-frame windows
+of one race, these are the host's display-link summaries over a whole session, five seconds each, with menus and loading
+included. The footprint figure is measured the same way in both.
+
+Two settings account for the difference between the first and the third column, and both are the defaults now:
+
+- **The GPU clock keeper is off.** It was ported from another fork, where it gained on a 16 GB M2 Pro. Here it spins a
+  threadgroup on the GPU for part of every frame, and this chip cannot spare it: on, the race ran 47.2 fps and held 22% of
+  the display ticks; off, 52.6 and 12%. `gpu_keep off` is the game profile's default and `DM_GPU_KEEP=1` turns it back on.
+- **File-backed texture uploads take the GPU path.** `DM_GUEST_FILE_CPU_UP=0` ships in the app's `env.txt` and saves the
+  CPU deswizzle of every file-backed upload: 47.2 fps against 44.1, and 103 frames over 100 ms against 178.
+
+A fourth run with the third run's settings came out at 45.7 fps, its replay thread at 15.00 ms of a 16.67 ms frame
+against 13.70 ms in the third. It ran with other work on the machine and the laptop warm after an hour of play, so it is
+reported here rather than folded in: it is what the same build does under load.
+
+What is left is the scene cut, and the log names it: a 745 ms frame carrying 792 texture uploads, 161 MB, in one frame.
+## The headline: the 14 November build
 
 **58.3 fps mean in a race, at full 1920x1080, with the GPU finishing in 10.5 ms against a 16.67 ms slot.**
 

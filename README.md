@@ -51,6 +51,11 @@ else: the first had none and compiled its way round the course, the third had 1,
 for the first six windows of the race. [PERFORMANCE.md](PERFORMANCE.md) has the windows, the stutters, the comparison
 against the 1.0.0 dump, and an honest list of what is still unmeasured.
 
+After the refresh onto nxnative main on 18 November, 254 commits later, the same machine measured a session mean of
+52.2 fps and race windows at a median of 53.1, best 60, with 49 frames over 100 ms and a 4.49 GB peak footprint. That
+figure counts menus and loading, where the table above counts a race only, so the two do not subtract; PERFORMANCE.md
+gives both methods and says which is which.
+
 ## How it works
 
 Three layers, stacked:
@@ -72,7 +77,12 @@ Because the same instruction set is on both ends, nothing simulates a CPU. That 
   builds rather than as an unknown version.
 - **Guest memory in files.** The 72.5 GB guest block lives in 73 sparse, unlinked 1 GB files, out of the footprint, which is
   what makes an 8 GB machine viable.
-- **A CPU upload gate**, with `DM_GUEST_FILE_CPU_UP=0` to compare against the GPU path.
+- **File-backed uploads on the GPU path.** The CPU deswizzle gate is kept, but the shipped settings leave it off
+  (`DM_GUEST_FILE_CPU_UP=0`): it measured 47.2 fps against 44.1, and 103 frames over 100 ms against 178.
+- **A GPU clock keeper and an upload source ring**, both ported from
+  [no-lag-kart](https://github.com/kingbumi31/no-lag-kart) and both off by default. The keeper gained on a 16 GB M2 Pro
+  and loses on the Neo (52.6 fps without it, 47.2 with), so the game profile sets `gpu_keep off`. The ring is not
+  proven yet and `DM_NVN_UP_COPY` stays at 0.
 - **A pipeline archive built at build time** for this Mac's GPU: 9,591 render pipelines and 728 compute ones, so a first
   race compiles dozens rather than thousands.
 - **One-command build and play**, with the settings, the icon and the seal handling baked in.

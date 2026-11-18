@@ -44,6 +44,9 @@ shader_note	Mario Kart World shaders
 # slow motion. The interval takes the host's frame step instead (MATCH_FRAME_STEP in patches.py, found by its function on any build that keeps it), at most 2; the game's own
 # 30 fps mode stays its own
 fps_target	60
+# The GPU clock keeper measured a loss on the Neo (A18 Pro, 8 GB): with it on the race ran 47.2 fps and held 22% of
+# the display ticks; with it off, 52.6 and 12%. It spins a threadgroup on the GPU, and this chip cannot spare it
+gpu_keep	off
 
 # ---- An 8 GB Mac ----
 # The game's reported free memory follows what it maps, and without the limit it never let its blocks go: 2.4 GB mapped by a fourth race on an iPhone, 1.25 GB with it
