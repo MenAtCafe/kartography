@@ -3770,7 +3770,7 @@ static uint64_t g_up_src_made;   // source buffers made (t_upload_src)
 // DM_NVN_UP_COPY=<MB> (0 or unset: off): this profile sets no up_copy key, so the size comes from the environment alone, and the ring is off unless the run asks for it
 static size_t upc_size(void) {
     static long v = -1;
-    if (v < 0) { const char *e = getenv("DM_NVN_UP_COPY"); v = e ? atol(e) : 0; if (v < 0) v = 0; if (v > 2048) v = 2048;
+    if (v < 0) { const char *e = getenv("DM_NVN_UP_COPY"); v = e ? atol(e) : DM_GAME_UP_COPY; if (v < 0) v = 0; if (v > 2048) v = 2048;
         if (v) MLOG("upload sources: copied into a %ld MB ring (DM_NVN_UP_COPY)", v); }
     return (size_t)v << 20;
 }
@@ -17843,7 +17843,7 @@ static void *gpu_keep_main(void *arg) {
 }
 static void gpu_keep_start(void) {
 #if TARGET_OS_OSX
-    const char *e = getenv("DM_GPU_KEEP"); int mode = e ? atoi(e) : 2;   /* our profile sets no gpu_keep: auto unless DM_GPU_KEEP says otherwise */ if (e && !strcmp(e, "auto")) mode = 2;   // unset: the profile's gpu_keep (auto unless set)
+    const char *e = getenv("DM_GPU_KEEP"); int mode = e ? atoi(e) : DM_GAME_GPU_KEEP;   /* the profile's gpu_keep: auto unless it says otherwise */ if (e && !strcmp(e, "auto")) mode = 2;   // unset: the profile's gpu_keep (auto unless set)
     if (mode <= 0) { MLOG("GPU clock keeper: off (%s)", e ? "DM_GPU_KEEP=0" : "default"); return; }
     pthread_t th; if (pthread_create(&th, NULL, gpu_keep_main, (void *)(intptr_t)mode)) { MLOG("[RED] GPU clock keeper: cannot start its thread"); return; }
     pthread_detach(th);
