@@ -86,12 +86,12 @@ Because the same instruction set is on both ends, nothing simulates a CPU. That 
   builds rather than as an unknown version.
 - **Guest memory in files.** The 72.5 GB guest block lives in 73 sparse, unlinked 1 GB files, out of the footprint, which is
   what makes an 8 GB machine viable.
-- **File-backed uploads on the GPU path.** The CPU deswizzle gate is kept, but the shipped settings leave it off
-  (`DM_GUEST_FILE_CPU_UP=0`): it measured 47.2 fps against 44.1, and 103 frames over 100 ms against 178.
-- **A GPU clock keeper and an upload source ring**, both ported from
-  [no-lag-kart](https://github.com/kingbumi31/no-lag-kart) and both off by default. The keeper gained on a 16 GB M2 Pro
-  and loses on the Neo (52.6 fps without it, 47.2 with), so the game profile sets `gpu_keep off`. The ring is not
-  proven yet and `DM_NVN_UP_COPY` stays at 0.
+- **Two ideas from [no-lag-kart](https://github.com/kingbumi31/no-lag-kart), measured and not kept.** A GPU clock
+  keeper, which spins work on the GPU to hold its clock up: it gains on a 16 GB M2 Pro, and here it cost 5 fps (47.2
+  against 52.6) and held twice as many display ticks, so the profile sets `gpu_keep off`. An upload source ring, which
+  is unproven and crashed twice in testing, so `DM_NVN_UP_COPY` stays at 0. Neither is a win on this machine.
+- **File-backed uploads on the GPU path.** That one is ours, and it works: the shipped settings leave the CPU gate off
+  (`DM_GUEST_FILE_CPU_UP=0`), worth 3 fps and nearly half the frames over 100 ms.
 - **A pipeline archive built at build time** for this Mac's GPU: 9,591 render pipelines and 728 compute ones, so a first
   race compiles dozens rather than thousands.
 - **One-command build and play**, with the settings, the icon and the seal handling baked in.
