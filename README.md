@@ -111,6 +111,11 @@ cd kartography
 DUMP="/path/to/your/mario-kart-world.nup" scripts/build.sh
 ```
 
+**Build 1.8.0.** Everything here was measured on it, it carries the update's own fixes, and it is the package the profile
+registers and the build script packs. The 1.0.0 dump still builds, because the profile registers that build as well, but
+it is kept for comparison rather than for playing: 27 to 32 fps at 1920x1080 on the same course against the figures
+above, and a render scale control that the 1.8.0 build does not need.
+
 About 45 minutes the first time, most of it translating 11,603 shaders and building the pipeline archive. About five
 minutes after that, because the caches are reused. The app lands at `OUT`, `~/Documents/Mario Kart World.app` by default, with the
 settings, the keyboard map and the icon already inside it.
