@@ -3798,7 +3798,6 @@ static id<MTLBuffer> up_copy_src(uint64_t addr, uint64_t len, uint64_t *off) {
 }
 
 static id<MTLBuffer> up_big_src(uint64_t addr, uint64_t len, uint64_t *off) {
-    { id<MTLBuffer> c = up_copy_src(addr, len, off); if (c) return c; }   // DM_NVN_UP_COPY, before the spans below make their own buffers
     // Not once the raw memory table holds the whole pool (big_full): the lookup finds that buffer. Ocarina of Time's first scene made 4,664 of these in one batch, 2.1 GB counted against the working set for pages already wired
     pthread_mutex_lock(&g_mu); int k = big_of(addr), in = k >= 0 && !g_big[k].full;
     if (k < 0 && len) { int i = pool_find(addr, len); in = i >= 0 && !g_pools[i].res && !addr_meets(g_pools[i].lo, g_pools[i].hi); }
@@ -3900,7 +3899,9 @@ static id<MTLTexture> pkg_upload_(const tex_t *t, uint64_t *stamp, id<MTLTexture
     void *mb; uint64_t mo;
     // A texture in a large pool (BIG_MIN) or one that holds only textures is read through a buffer of its own, held by the upload batch: a one-time read must not leave that memory wired for good
     id<MTLBuffer> upsrc = nil; unsigned src_batch = 0;   // the upload batch that holds upsrc (g_up_seq)
-    if (!keep_cpu && !linear && !rb_shift && !sparse && g_nvn_deswz_gpu) { up_begin(); src_batch = g_up_seq; upsrc = up_big_src((uint64_t)t->mem, t->L.size, &mo); if (upsrc) mb = (__bridge void *)upsrc; }
+    if (!keep_cpu && !linear && !rb_shift && !sparse && g_nvn_deswz_gpu) { up_begin(); src_batch = g_up_seq; upsrc = up_copy_src((uint64_t)t->mem, t->L.size, &mo);
+        if (!upsrc) upsrc = up_big_src((uint64_t)t->mem, t->L.size, &mo);   // DM_NVN_UP_COPY first: a copy into the resident ring, else a buffer over the pages
+        if (upsrc) mb = (__bridge void *)upsrc; }
     // A sparse pool's texture is gathered on the GPU through its page table (sp_pages_gpu), but on the CPU for DM_NVN_ZBLOCK, which counts its blocks there
     uint64_t *spt = NULL, spn = 0;
     t_tex_upload_lookup = 1;
@@ -3941,7 +3942,7 @@ static id<MTLTexture> pkg_upload_(const tex_t *t, uint64_t *stamp, id<MTLTexture
         }
         // up_alloc may have flushed the batch that held the first source buffer: only then the new batch needs one of its own. Made for every texture, each staged upload from a large pool
         // put its storage twice into the residency set (Switch Sports Resort's first court frame: 855 textures, 1.8 GB of source buffers for 908 MB of storage; t_upload_src)
-        if (upsrc && g_up_seq != src_batch) { uint64_t mo2; id<MTLBuffer> u2 = up_big_src((uint64_t)t->mem, t->L.size, &mo2); if (u2) { upsrc = u2; mb = (__bridge void *)u2; mo = mo2; } }
+        if (upsrc && g_up_seq != src_batch) { uint64_t mo2; id<MTLBuffer> u2 = up_copy_src((uint64_t)t->mem, t->L.size, &mo2); if (!u2) u2 = up_big_src((uint64_t)t->mem, t->L.size, &mo2); if (u2) { upsrc = u2; mb = (__bridge void *)u2; mo = mo2; } }
         size_t off = 0; int enc_ok = g_up_ce != nil, nb0 = g_nup_blits;
         for (unsigned l = 0; enc_ok && l < d.mipmapLevelCount; l++) {
             uint32_t w, h, z; tex_lsize(t, l, &w, &h, &z);
