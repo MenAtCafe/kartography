@@ -159,6 +159,16 @@ shipped layout.
 - **No online, no local wireless, no GameChat.** Single player and same-machine multiplayer only.
 - **It gets smoother as you play.** Pipelines compile on first sight and are kept.
 
+## History
+
+| When | What |
+|---|---|
+| early November 2026 | Bring-up on the 1.0.0 dump, starting from [plumber-racer-2](https://github.com/cheemu21/plumber-racer-2). 27 to 32 fps at 1920x1080. |
+| mid November | 1.8.0 registered in the profile, guest memory moved into sparse files so an 8 GB Mac stops swapping, and a pipeline archive built for this GPU. Three runs: 46.7, 55.2, 58.3 fps. The repository is renamed Kartography. |
+| 15 November | The keyboard map sent upstream as [PR #1535](https://github.com/seedds/nxnative/pull/1535), the 1.8.0 build row as [PR #2621](https://github.com/seedds/nxnative/pull/2621). |
+| 18 November | Refreshed onto nxnative main, 254 commits later. Two settings from another fork were measured and settled here: the GPU clock keeper costs 5 fps on this chip and ships off, the CPU upload gate costs 3 fps and ships off. An upload ring was ported and left off, unproven. Session means after the refresh: 52.2 fps, 49 frames over 100 ms, 4.49 GB peak. |
+
+Every number above has its method in [PERFORMANCE.md](PERFORMANCE.md), including the ones that do not compare with each other.
 ## Credits and license
 
 The engine is [nxnative](https://github.com/seedds/nxnative) by seedds, MIT licensed, and this repository carries that
