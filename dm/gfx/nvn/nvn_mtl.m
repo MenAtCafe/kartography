@@ -3346,6 +3346,14 @@ static void up_wait_zero(_Atomic int *v, int site) {
     pthread_mutex_unlock(&g_up_wmu);
     if (ws_on()) ws_put(site, w0, 1);
 }
+// The upload source ring (DM_NVN_UP_COPY, up_copy_src), ported from kingbumi31/no-lag-kart: the source of an upload in a large pool is a copy of the texture's storage in a shared
+// ring that the residency set holds for good, in place of a zero-copy buffer over its pages made resident for each upload. On Mario Kart World's cut to the starting grid that was
+// 1,440 source buffers in one frame and 36.9 ms of residency commits for them; the fork's run halved that work and made the frame 20 to 28 ms shorter (M2 Pro).
+// Bytes handed out so far (monotonic; the ring offset is head % size), the head at the open batch's last copy, and the bytes whose batches have completed (each batch's feedback
+// handler raises it; batches complete in the order they were committed, so a maximum is enough)
+static id<MTLBuffer> g_upc_blk; static uint64_t g_upc_head, g_upc_batch_end; static _Atomic uint64_t g_upc_done;
+static _Atomic uint64_t g_upc_n, g_upc_bytes, g_upc_full;   // copies made, their bytes, sources the full ring sent back to a zero-copy buffer
+static void upc_done(uint64_t end) { uint64_t d = atomic_load(&g_upc_done); while (d < end && !atomic_compare_exchange_weak(&g_upc_done, &d, end)) {} }
 static unsigned g_up_seq;
 #define UP_BLOCK_SIZE (32u * 1024u * 1024u)
 // Each upload slot keeps its staging resident until its next batch (up_begin waits for the previous batch). Grow the first block to the slot's previous batch demand, not just its first texture:
@@ -3419,6 +3427,7 @@ static void up_flush(void) {
     NSArray *dsts = targets.allObjects;
     static int lost_at = -2; static uint64_t batch_n; if (lost_at == -2) { const char *e = getenv("DM_TEST_UP_LOST"); lost_at = e ? atoi(e) : -1; } int fake_lost = dsts.count && lost_at > 0 && (int)++batch_n == lost_at;
     MTL4CommitOptions *o = [MTL4CommitOptions new];
+    uint64_t upc_end = g_upc_batch_end;   // the ring bytes this batch's copies reach (up_copy_src)
     atomic_fetch_add(&g_up_pending, 1);
     [o addFeedbackHandler:^(id<MTL4CommitFeedback> f) {
         if (f.error) { MLOG("[RED] upload command buffer execution error: %s", f.error.description.UTF8String); res_top_once(f.error); gpu_lost_check(f.error, "upload"); }
@@ -3436,6 +3445,7 @@ static void up_flush(void) {
             [views removeAllObjects];   // upload-only integer views share their targets' residency
             res_commit();
         }
+        upc_done(upc_end);
         atomic_store(&g_up_alloc_busy[slot], 0);
         atomic_fetch_sub(&g_up_pending, 1);
         up_wake();
@@ -3756,7 +3766,38 @@ static void rb_swap_rows(uint8_t *p, size_t wb, size_t rows, size_t nz, size_t r
 // nil elsewhere (or if it is refused: the caller looks the address up as usual). The GPU only reads it, so it is made over the pages the upload has just protected, not through pool_buf,
 // which would make them writable again and the texture count as written at once
 static uint64_t g_up_src_made;   // source buffers made (t_upload_src)
+
+// DM_NVN_UP_COPY=<MB> (0 or unset: off): this profile sets no up_copy key, so the size comes from the environment alone, and the ring is off unless the run asks for it
+static size_t upc_size(void) {
+    static long v = -1;
+    if (v < 0) { const char *e = getenv("DM_NVN_UP_COPY"); v = e ? atol(e) : 0; if (v < 0) v = 0; if (v > 2048) v = 2048;
+        if (v) MLOG("upload sources: copied into a %ld MB ring (DM_NVN_UP_COPY)", v); }
+    return (size_t)v << 20;
+}
+static void upc_copy(uint8_t *dst, const uint8_t *src, size_t n) {   // a large texture's copy in parts on several cores
+    if (n < (8u << 20)) { memcpy(dst, src, n); return; }
+    size_t parts = 4, step = ((n + parts - 1) / parts + 16383) & ~(size_t)16383;
+    dispatch_apply(parts, dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^(size_t i) { size_t o = i * step; if (o < n) memcpy(dst + o, src + o, MIN(step, n - o)); });
+}
+static id<MTLBuffer> up_copy_src(uint64_t addr, uint64_t len, uint64_t *off) {
+    size_t cap = upc_size(); uint64_t need = (len + 255u) & ~(uint64_t)255u;
+    if (!cap || !len || need > cap / 4) return nil;
+    if (!g_upc_blk) {
+        g_upc_blk = [g_dev newBufferWithLength:cap options:MTLResourceStorageModeShared];
+        if (!g_upc_blk) { MLOG("[RED] upload sources: no %zu MB ring, zero-copy buffers as before", cap >> 20); setenv("DM_NVN_UP_COPY", "0", 1); return nil; }
+        res_add(g_upc_blk); res_commit();
+    }
+    uint64_t head = g_upc_head, at = head % cap;
+    if (at + need > cap) head += cap - at;   // it does not fit before the ring's end: from its start
+    if (head + need - atomic_load(&g_upc_done) > cap) { atomic_fetch_add(&g_upc_full, 1); return nil; }
+    upc_copy((uint8_t *)g_upc_blk.contents + head % cap, (const uint8_t *)(uintptr_t)addr, (size_t)len);
+    *off = head % cap; g_upc_head = g_upc_batch_end = head + need;
+    atomic_fetch_add(&g_upc_n, 1); atomic_fetch_add(&g_upc_bytes, len);
+    return g_upc_blk;
+}
+
 static id<MTLBuffer> up_big_src(uint64_t addr, uint64_t len, uint64_t *off) {
+    { id<MTLBuffer> c = up_copy_src(addr, len, off); if (c) return c; }   // DM_NVN_UP_COPY, before the spans below make their own buffers
     // Not once the raw memory table holds the whole pool (big_full): the lookup finds that buffer. Ocarina of Time's first scene made 4,664 of these in one batch, 2.1 GB counted against the working set for pages already wired
     pthread_mutex_lock(&g_mu); int k = big_of(addr), in = k >= 0 && !g_big[k].full;
     if (k < 0 && len) { int i = pool_find(addr, len); in = i >= 0 && !g_pools[i].res && !addr_meets(g_pools[i].lo, g_pools[i].hi); }
