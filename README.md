@@ -184,6 +184,7 @@ shipped layout.
 | 18 November | Refreshed onto nxnative main, 254 commits later. Two settings from another fork were measured and settled here: the GPU clock keeper costs 5 fps on this chip and ships off, the CPU upload gate costs 3 fps and ships off. An upload ring was ported and left off, unproven. Session means after the refresh: 52.2 fps, 49 frames over 100 ms, 4.49 GB peak. |
 
 Every number above has its method in [PERFORMANCE.md](PERFORMANCE.md), including the ones that do not compare with each other.
+
 ## Credits and license
 
 The engine is [nxnative](https://github.com/seedds/nxnative) by seedds, MIT licensed, and this repository carries that
