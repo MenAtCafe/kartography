@@ -40,7 +40,7 @@ One course, Mario Bros. Circuit, on a MacBook Neo (Apple A18 Pro, 8 GB of unifie
 
 Three runs of this build, one race each, changing only the settings:
 
-| | The defaults as they were | Upload gate off | **Gate and clock keeper off** |
+| | First run | Second run | **Third run** |
 |---|---:|---:|---:|
 | Session mean | 44.1 fps | 47.2 fps | **52.2 fps** |
 | Mean after the menus | 42.4 fps | 47.1 fps | **52.6 fps** |
@@ -49,11 +49,11 @@ Three runs of this build, one race each, changing only the settings:
 | Display ticks spent holding | 29% | 22% | **12%** |
 | Peak footprint | 4.50 GB | 4.53 GB | **4.49 GB** |
 
-At full 1920x1080 with MetalFX scaling to the window. Two settings account for the third column and both are the
-defaults now: the GPU clock keeper off, because on this chip it spins work the frames need more than the clock it buys,
-and file-backed uploads on the GPU path instead of the CPU's. A fourth run with the same settings measured 45.7 fps while
-the machine was busy and warm, which is what a fanless laptop does after an hour of play, and it is reported rather than
-hidden.
+At full 1920x1080 with MetalFX scaling to the window. One setting separates each run: the second turns the upload gate
+off, the third turns the clock keeper off as well, and both are the defaults now. The keeper is off because on this chip it
+spins work the frames need more than the clock it buys; the gate is off because the GPU upload path measured faster. A
+fourth run with the same settings measured 45.7 fps while the machine was busy and warm, which is what a fanless laptop
+does after an hour of play, and it is reported rather than hidden.
 
 The **14 November build this replaces** measured 58.3 fps on its third run, 55.2 on its second and 46.7 on its first,
 taken over 300-frame windows of a race. That method leaves menus and loading out, so it does not subtract from the table
@@ -159,21 +159,23 @@ shipped layout.
 ## Limitations
 
 - **One course measured.** Mario Bros. Circuit, first track in the game. Heavier tracks are untested.
+- **Tested on one Mac.** An Apple A18 Pro with 8 GB. Nothing from the M1 to the M6, base or Pro, has been run here, and
+  those chips may show graphical issues: the flickering scenery reported on M-series Macs is still open upstream.
 - **One shader does not translate.** 11,602 of 11,603 compile; the missing one uses an Ampere instruction that is not
   implemented yet.
 - **Two diagnostics repeat once per run**, a slow-path texture upload and one texture type mismatch. Neither has cost a
   frame that we can see.
 - **Some frames stall for no accounted reason.** 300 to 400 ms with no pipeline, no upload and no GPU time inside them.
   Open.
-- **No online, no local wireless, no GameChat.** Single player and same-machine multiplayer only.
+- **Single player only.** No online and no local wireless.
 - **It gets smoother as you play.** Pipelines compile on first sight and are kept.
 
 ## History
 
 | When | What |
 |---|---|
-| early November 2026 | Bring-up on the 1.0.0 dump, starting from [plumber-racer-2](https://github.com/cheemu21/plumber-racer-2). 27 to 32 fps at 1920x1080. |
-| mid November | 1.8.0 registered in the profile, guest memory moved into sparse files so an 8 GB Mac stops swapping, and a pipeline archive built for this GPU. Three runs: 46.7, 55.2, 58.3 fps. The repository is renamed Kartography. |
+| Early November 2026 | Bring-up on the 1.0.0 dump, starting from [plumber-racer-2](https://github.com/cheemu21/plumber-racer-2). 27 to 32 fps at 1920x1080. |
+| Mid November | 1.8.0 registered in the profile, guest memory moved into sparse files so an 8 GB Mac stops swapping, and a pipeline archive built for this GPU. Three runs: 46.7, 55.2, 58.3 fps. The repository is renamed Kartography. |
 | 15 November | The keyboard map sent upstream as [PR #1535](https://github.com/seedds/nxnative/pull/1535), the 1.8.0 build row as [PR #2621](https://github.com/seedds/nxnative/pull/2621). |
 | 18 November | Refreshed onto nxnative main, 254 commits later. Two settings from another fork were measured and settled here: the GPU clock keeper costs 5 fps on this chip and ships off, the CPU upload gate costs 3 fps and ships off. An upload ring was ported and left off, unproven. Session means after the refresh: 52.2 fps, 49 frames over 100 ms, 4.49 GB peak. |
 
