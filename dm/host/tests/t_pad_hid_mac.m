@@ -22,11 +22,14 @@
 @implementation TestDev
 @end
 @interface TestElem : NSObject
-@property uint32_t page, usage, report; @property int output;
+@property uint32_t page, usage, report, reportSize; @property int output;
+@property CFIndex min, max; @property BOOL relative; @property TestElem *parent;
 @end
 @implementation TestElem
 @end
-static TestElem *elem(int output, uint32_t report, uint32_t page, uint32_t usage) { TestElem *e = [TestElem new]; e.output = output; e.report = report; e.page = page; e.usage = usage; return e; }
+static TestElem *elem(int output, uint32_t report, uint32_t page, uint32_t usage) {
+    TestElem *e = [TestElem new]; e.output = output; e.report = report; e.page = page; e.usage = usage; e.max = 1; return e;
+}
 @interface TestValue : NSObject
 @property TestElem *element; @property CFIndex value;
 @end
@@ -59,12 +62,15 @@ static void test_report_cb(IOHIDDeviceRef device, uint8_t *buffer, CFIndex len, 
 static void test_value_cb(IOHIDDeviceRef device, IOHIDValueCallback callback, void *ctx) { TestDev *d = (__bridge id)device; d.valueCallback = callback; d.valueContext = ctx; }
 static IOHIDElementRef test_val_element(IOHIDValueRef v) { return (__bridge IOHIDElementRef)((__bridge TestValue *)v).element; }
 static CFIndex test_val_int(IOHIDValueRef v) { return ((__bridge TestValue *)v).value; }
-static CFIndex test_el_min(IOHIDElementRef e) { (void)e; return 0; }
-static CFIndex test_el_max(IOHIDElementRef e) { (void)e; return 1; }
+static CFIndex test_el_min(IOHIDElementRef e) { return ((__bridge TestElem *)e).min; }
+static CFIndex test_el_max(IOHIDElementRef e) { return ((__bridge TestElem *)e).max; }
 static CFArrayRef test_elements(IOHIDDeviceRef device, CFDictionaryRef match, IOOptionBits o) { (void)match; (void)o; return CFBridgingRetain(((__bridge TestDev *)device).elements ?: @[]); }
 static uint32_t test_el_page(IOHIDElementRef e) { return ((__bridge TestElem *)e).page; }
 static uint32_t test_el_usage(IOHIDElementRef e) { return ((__bridge TestElem *)e).usage; }
 static uint32_t test_el_report(IOHIDElementRef e) { return ((__bridge TestElem *)e).report; }
+static uint32_t test_el_report_size(IOHIDElementRef e) { return ((__bridge TestElem *)e).reportSize; }
+static Boolean test_el_relative(IOHIDElementRef e) { return ((__bridge TestElem *)e).relative ? true : false; }
+static IOHIDElementRef test_el_parent(IOHIDElementRef e) { return (__bridge IOHIDElementRef)((__bridge TestElem *)e).parent; }
 static IOHIDElementType test_el_type(IOHIDElementRef e) { return ((__bridge TestElem *)e).output ? kIOHIDElementTypeOutput : kIOHIDElementTypeInput_Button; }
 static io_service_t test_service(IOHIDDeviceRef device) { return (io_service_t)((__bridge TestDev *)device).entry; }
 static kern_return_t test_entry_id(io_registry_entry_t e, uint64_t *id) { *id = e; return KERN_SUCCESS; }
@@ -117,6 +123,9 @@ static void advance_timers(uint64_t ns) {
 #define IOHIDElementGetUsagePage test_el_page
 #define IOHIDElementGetUsage test_el_usage
 #define IOHIDElementGetReportID test_el_report
+#define IOHIDElementGetReportSize test_el_report_size
+#define IOHIDElementIsRelative test_el_relative
+#define IOHIDElementGetParent test_el_parent
 #define IOHIDElementGetType test_el_type
 #define GCController TestGC
 #define dispatch_time test_dispatch_time
@@ -169,11 +178,15 @@ static TestDev *virtual_pad(NSString *name, int vid, uint64_t entry) {
 static TestGC *controller(NSString *name, int usable) {
     TestGC *c = [TestGC new]; c.vendorName = name; c.extendedGamepad = usable ? @1 : nil; [g_gc addObject:c]; return c;
 }
-static void button(TestDev *d, int down) {
+static void push_value(TestDev *d, TestElem *element, CFIndex value) {
     assert(d.valueCallback);
-    TestValue *v = [TestValue new]; v.element = d.elements[0]; v.value = down;
+    TestValue *v = [TestValue new]; v.element = element; v.value = value;
     int before = reads; d.valueCallback(d.valueContext, kIOReturnSuccess, ref(d), (__bridge IOHIDValueRef)v);
-    assert(reads == before + 1 && buttons == (down ? DM_BTN_B : 0));
+    assert(reads == before + 1);
+}
+static void button(TestDev *d, int down) {
+    push_value(d, d.elements[0], down);
+    assert(buttons == (down ? DM_BTN_B : 0));
 }
 static void gc_fallback(void) {
     // No GameController delivery: all virtual vendors use the existing wait, even the trusted physical-controller vendors. No Steam name or product gate.
@@ -221,9 +234,137 @@ static void gc_fallback(void) {
     puts("t_pad_hid_mac: virtual fallback and GameController handoff passed");
 }
 
+static void hid_layouts(void) {
+    TestElem *x = elem(0, 1, 1, 0x30), *y = elem(0, 1, 1, 0x31);
+    TestElem *z = elem(0, 1, 1, 0x32), *rz = elem(0, 1, 1, 0x35);
+    TestElem *rx = elem(0, 1, 1, 0x33), *ry = elem(0, 1, 1, 0x34);
+    TestElem *face = elem(0, 1, 9, 3), *simple = elem(0, 0x3F, 9, 3);
+    TestElem *brake = elem(0, 1, 2, 0xC5), *accel = elem(0, 1, 2, 0xC4);
+    TestDev *steam = virtual_pad(@"Remote controller", 0x045e, 113);
+    TestDev *other = virtual_pad(@"Xbox ID with dedicated triggers", 0x045e, 114);
+    TestDev *nin = virtual_pad(@"Xbox ID with Nintendo report", 0x045e, 115);
+    steam.elements = @[x, y, z, rz, rx, ry, face];
+    other.elements = @[x, y, rx, ry, brake, accel, face];
+    nin.elements = @[x, y, z, rz, rx, ry, simple];   // report 0x3F discovered after the axes
+    for (TestDev *d in @[steam, other, nin]) hidpad_found(NULL, kIOReturnSuccess, NULL, ref(d));
+    wait_ms(2200);
+
+    int32_t s[4];
+    push_value(steam, face, 1); assert(buttons == DM_BTN_Y);
+    push_value(steam, face, 0); assert(buttons == 0);
+    push_value(steam, rx, 1);
+    push_value(steam, z, 1); assert(buttons == DM_BTN_ZL);
+    push_value(steam, rz, 1); assert(buttons == (DM_BTN_ZL | DM_BTN_ZR));
+    pad_hid_sticks(&find(steam)->st, s); assert(s[2] == DM_STICK_MAX && s[3] == 0);
+    push_value(steam, z, 0); assert(buttons == DM_BTN_ZR);
+    push_value(steam, rz, 0); assert(buttons == 0);
+
+    push_value(other, face, 1); assert(buttons == 0);   // the default map has no usage 3
+    push_value(other, brake, 1); assert(buttons == DM_BTN_ZL);
+    push_value(other, accel, 1); assert(buttons == (DM_BTN_ZL | DM_BTN_ZR));
+    push_value(other, brake, 0); push_value(other, accel, 0); assert(buttons == 0);
+
+    push_value(nin, simple, 1); assert(buttons == DM_BTN_Y);
+    push_value(nin, z, 1); push_value(nin, rz, 1); assert(buttons == DM_BTN_Y);
+    pad_hid_sticks(&find(nin)->st, s); assert(s[2] == DM_STICK_MAX && s[3] == -DM_STICK_MAX);
+    for (TestDev *d in @[steam, other, nin]) hidpad_removed(NULL, kIOReturnSuccess, NULL, ref(d));
+    assert(!attached && !g_hidpads && !g_hidpads_gc && !g_hidpads_waiting);
+
+    // The PS4-mode Fighting Stick Alpha (0f0d:011c) also declares button usages 1–14, in input report 1. See PR #3061 and docs/reference/services.md.
+    NSMutableArray *taiko_buttons = [NSMutableArray array], *ps4_buttons = [NSMutableArray array];
+    for (uint32_t u = 1; u <= 14; u++) {
+        [taiko_buttons addObject:elem(0, 0, kHIDPage_Button, u)];
+        [ps4_buttons addObject:elem(0, 1, kHIDPage_Button, u)];
+    }
+    TestDev *drum = virtual_pad(@"Taiko Controller", 0x0f0d, 116), *stick = virtual_pad(@"Fighting Stick Alpha (PS4 mode)", 0x0f0d, 117);
+    drum.pid = 0x00f0; stick.pid = 0x011c; drum.virtualDevice = stick.virtualDevice = nil;
+    drum.elements = [@[elem(0, 0, 1, 0x30), elem(0, 0, 1, 0x31), elem(0, 0, 1, 0x32), elem(0, 0, 1, 0x35), elem(0, 0, 1, 0x39)]
+        arrayByAddingObjectsFromArray:taiko_buttons];
+    stick.elements = [@[x, y, z, rz, elem(0, 1, 1, 0x39), rx, ry] arrayByAddingObjectsFromArray:ps4_buttons];
+    for (TestDev *d in @[drum, stick]) hidpad_found(NULL, kIOReturnSuccess, NULL, ref(d));
+    wait_ms(2200);
+    push_value(drum, taiko_buttons[2], 1); assert(buttons == DM_BTN_A);
+    push_value(drum, taiko_buttons[2], 0); assert(buttons == 0);
+    push_value(drum, taiko_buttons[9], 1); assert(buttons == DM_BTN_PLUS);
+    push_value(drum, taiko_buttons[9], 0); assert(buttons == 0);
+    push_value(stick, ps4_buttons[2], 1); assert(buttons == 0);   // the default map has no usage 3
+    push_value(stick, ps4_buttons[0], 1); assert(buttons == DM_BTN_B);
+    push_value(stick, ps4_buttons[0], 0); assert(buttons == 0);
+    for (TestDev *d in @[drum, stick]) hidpad_removed(NULL, kIOReturnSuccess, NULL, ref(d));
+    assert(!attached && !g_hidpads && !g_hidpads_gc && !g_hidpads_waiting);
+    puts("t_pad_hid_mac: Xbox axis matching, Nintendo report precedence and Taiko Drum layout passed");
+}
+
+static void push_ignored_value(TestDev *d, TestElem *element, CFIndex value) {
+    assert(d.valueCallback);
+    TestValue *v = [TestValue new]; v.element = element; v.value = value;
+    int before = reads; d.valueCallback(d.valueContext, kIOReturnSuccess, ref(d), (__bridge IOHIDValueRef)v);
+    assert(reads == before);
+}
+static void hid_composite_and_wrapped(void) {
+    // Composite gamepad (modeled on SHIELD 2015, tested with an unrelated VID:PID to prove no device gate):
+    // report 1 GamePad collection (with sticks under a standard Physical Pointer collection), wrapped -1..0 16-bit axes,
+    // Consumer AC Back inside GamePad, sibling Mouse collection (relative X/Y + mouse click), and sibling standalone Consumer Control collection.
+    TestElem *col_pad = elem(0, 0, kHIDPage_GenericDesktop, kHIDUsage_GD_GamePad);
+    TestElem *col_ptr = elem(0, 0, kHIDPage_GenericDesktop, kHIDUsage_GD_Pointer); col_ptr.parent = col_pad;
+    TestElem *col_mouse = elem(0, 0, kHIDPage_GenericDesktop, kHIDUsage_GD_Mouse);
+    TestElem *col_csmr = elem(0, 0, kHIDPage_Consumer, kHIDUsage_Csmr_ConsumerControl);
+    TestElem *lx = elem(0, 1, 1, 0x30), *ly = elem(0, 1, 1, 0x31), *rx = elem(0, 1, 1, 0x32), *ry = elem(0, 1, 1, 0x35);
+    TestElem *lt = elem(0, 1, 2, 0xC5), *rt = elem(0, 1, 2, 0xC4);
+    lx.parent = ly.parent = col_ptr; rx.parent = ry.parent = lt.parent = rt.parent = col_pad;
+    for (TestElem *a in @[lx, ly, rx, ry, lt, rt]) { a.min = -1; a.max = 0; a.reportSize = 16; }
+    TestElem *start = elem(0, 1, kHIDPage_Button, 12); start.parent = col_pad;
+    TestElem *ac_back = elem(0, 1, kHIDPage_Consumer, kHIDUsage_Csmr_ACBack); ac_back.parent = col_pad;
+    TestElem *ac_home = elem(0, 1, kHIDPage_Consumer, 0x223); ac_home.parent = col_pad;
+    TestElem *rel_in_pad = elem(0, 1, 1, 0x30); rel_in_pad.parent = col_pad; rel_in_pad.relative = YES; rel_in_pad.min = -127; rel_in_pad.max = 127;
+    TestElem *mx = elem(0, 2, 1, 0x30), *my = elem(0, 2, 1, 0x31), *mbtn = elem(0, 2, kHIDPage_Button, 1);
+    mx.parent = my.parent = mbtn.parent = col_mouse; mx.relative = my.relative = YES; mx.min = my.min = -127; mx.max = my.max = 127;
+    TestElem *media_back = elem(0, 3, kHIDPage_Consumer, kHIDUsage_Csmr_ACBack); media_back.parent = col_csmr;
+
+    TestDev *pad = [TestDev new]; pad.name = @"Composite HID Pad"; pad.vid = 0x1234; pad.pid = 0x5678; pad.entry = 120;
+    pad.elements = @[lx, ly, rx, ry, lt, rt, start, ac_back, ac_home, rel_in_pad, mx, my, mbtn, media_back];
+    BOOL saved_supports = g_supports; g_supports = NO;
+    hidpad_found(NULL, kIOReturnSuccess, NULL, ref(pad));
+    hid_pad *hp = find(pad);
+    assert(hp && hp->st.has[PH_X] && hp->st.has[PH_Y] && hp->st.has[PH_Z] && hp->st.has[PH_RZ] && hp->st.has[PH_BRAKE] && hp->st.has[PH_ACCEL]);
+
+    int32_t s[4];
+    push_value(pad, lx, 0x7fff); push_value(pad, ly, -32768); push_value(pad, rx, 0x7fff); push_value(pad, ry, 0x7fff);
+    pad_hid_sticks(&hp->st, s); assert(s[0] == 0 && s[1] == 0 && s[2] == 0 && s[3] == 0);
+    push_value(pad, lx, -1); push_value(pad, ly, 0);
+    pad_hid_sticks(&hp->st, s); assert(s[0] == DM_STICK_MAX && s[1] == DM_STICK_MAX);
+    // Relative mouse X/Y, mouse click, relative axis inside GamePad, AC Home and standalone Consumer Control AC Back are all ignored.
+    push_ignored_value(pad, mx, -127); push_ignored_value(pad, my, 127); push_ignored_value(pad, mbtn, 1);
+    push_ignored_value(pad, rel_in_pad, -127); push_ignored_value(pad, ac_home, 1); push_ignored_value(pad, media_back, 1);
+    pad_hid_sticks(&hp->st, s); assert(s[0] == DM_STICK_MAX && s[1] == DM_STICK_MAX && buttons == 0);
+    // Measured trigger sweep on wrapped 16-bit Brake/Accel.
+    static const long sweep[] = {0, 5305, 16397, 26314, 44624, 65535, 20445, 0};
+    for (unsigned i = 0; i < sizeof sweep / sizeof *sweep; i++) {
+        push_value(pad, lt, sweep[i]); assert(!!(buttons & DM_BTN_ZL) == (sweep[i] > 32767));
+        push_value(pad, rt, sweep[i]); assert(!!(buttons & DM_BTN_ZR) == (sweep[i] > 32767));
+    }
+    push_value(pad, ac_back, 1); assert(buttons == DM_BTN_MINUS);
+    push_value(pad, start, 1); assert(buttons == (DM_BTN_PLUS | DM_BTN_MINUS));
+    push_value(pad, ac_back, 0); assert(buttons == DM_BTN_PLUS);
+    push_value(pad, start, 0); assert(buttons == 0);
+    hidpad_removed(NULL, kIOReturnSuccess, NULL, ref(pad));
+
+    // A device whose only X/Y are relative (Mouse collection) does not mark left-stick axes present.
+    TestDev *rel_only = [TestDev new]; rel_only.name = @"Relative-only axes"; rel_only.vid = 0x1234; rel_only.pid = 0x5679; rel_only.entry = 121;
+    rel_only.elements = @[mx, my, rel_in_pad];
+    hidpad_found(NULL, kIOReturnSuccess, NULL, ref(rel_only));
+    hp = find(rel_only); assert(hp && !hp->st.has[PH_X] && !hp->st.has[PH_Y]);
+    hidpad_removed(NULL, kIOReturnSuccess, NULL, ref(rel_only));
+    g_supports = saved_supports;
+    assert(!attached && !g_hidpads && !g_hidpads_gc && !g_hidpads_waiting);
+    puts("t_pad_hid_mac: composite mouse filtering, wrapped unsigned axes and Consumer AC Back passed");
+}
+
 int main(void) { @autoreleasepool {
     g_gc = [NSMutableArray new];
     gc_fallback();
+    hid_layouts();
+    hid_composite_and_wrapped();
     TestGC *gc = [TestGC new]; gc.productCategory = @"Switch Pro Controller"; gc.vendorName = @"Pro Controller"; gc.extendedGamepad = @1;
     // issue #2237: one Pro Controller over Bluetooth, which GameController lists, and a second entry of its model at location 0 that sends nothing
     [g_gc addObject:gc];
@@ -270,7 +411,7 @@ int main(void) { @autoreleasepool {
     TestDev *nano = [TestDev new]; nano.name = @"Lic Pro Controller"; nano.loc = 0x31; nano.entry = 31; nano.transport = @"Bluetooth"; nano.elements = nin;
     hidpad_found(NULL, kIOReturnSuccess, NULL, ref(nano));
     hid_pad *n = find(nano);
-    assert(n && attached == 1 && n->proto && (n->nin & PAD_NIN_RUMBLE) && n->st.raw && n->st.map[0] == 2 && n->st.map[2] == 4);   // report 0x3F's numbering until then
+    assert(n && attached == 1 && n->proto && (n->nin & PAD_NIN_RUMBLE) && n->st.layout == PAD_HID_NINTENDO && n->st.map[0] == 2 && n->st.map[2] == 4);   // report 0x3F's numbering until then
     assert(nouts == 1 && outs[0][0] == 0x01 && outs[0][1] == JC1_SUB_DEVICE_INFO && nano.callback);
     wait_ms(300); assert(nouts == 2 && outs[1][1] == JC1_SUB_DEVICE_INFO && n->tries == 2);   // no answer yet: asked again
     uint8_t r[64] = {0x21}; r[13] = 0x82; r[14] = JC1_SUB_DEVICE_INFO;
@@ -299,10 +440,10 @@ int main(void) { @autoreleasepool {
     assert(motion_samples == 6 && fabsf(motion_acc[0] - 1) < 1e-6f);
     assert(fabsf(motion_rot[1] - 100 * n->unit.cal.gyro_scale[0] * (float)M_PI / 180) < 1e-6f);
     // A map survives the automatic switch to full mode; Home and Capture still address usages 13 and 14.
-    pad_hid_init(&n->st, "A=1,B=2,X=13,Y=14", 1); n->st.buttons = 1u << 1 | 1u << 12 | 1u << 13;
+    pad_hid_init(&n->st, "A=1,B=2,X=13,Y=14", PAD_HID_NINTENDO); n->st.buttons = 1u << 1 | 1u << 12 | 1u << 13;
     uint64_t mapped = pad_hid_buttons(&n->st); assert(mapped == (DM_BTN_B | DM_BTN_X | DM_BTN_Y));
     r[4] = 0x30; push_report(nano, r, 49); assert(n->pro_m == mapped);
-    pad_hid_init(&n->st, NULL, 1);
+    pad_hid_init(&n->st, NULL, PAD_HID_NINTENDO);
     player = 0; hidpad_lights(n, 0); assert(nouts == 10 && outs[9][1] == JC1_SUB_LEDS && outs[9][2] == 0x01);   // player 1 once it joins
     hidpad_lights(n, 0); assert(nouts == 10);                                                                    // sent once
     player = -1;
@@ -325,12 +466,12 @@ int main(void) { @autoreleasepool {
     // buttons in report 0x3F but no subcommand reports: that report's numbering, no output
     TestDev *simple = [TestDev new]; simple.name = @"Pad"; simple.entry = 32; simple.elements = @[elem(0, 0x3F, 9, 1)];
     hidpad_found(NULL, kIOReturnSuccess, NULL, ref(simple)); n = find(simple);
-    assert(n && !n->proto && n->st.raw && n->st.map[2] == 4 && nouts == base);
+    assert(n && !n->proto && n->st.layout == PAD_HID_NINTENDO && n->st.map[2] == 4 && nouts == base);
     hidpad_removed(NULL, kIOReturnSuccess, NULL, ref(simple));
     // an 8BitDo (buttons in report 1): its own numbering, untouched
     TestDev *ebd = [TestDev new]; ebd.vid = PAD_HID_DEFAULT_VENDOR; ebd.name = @"8BitDo"; ebd.entry = 33; ebd.elements = @[elem(0, 1, 9, 1), elem(1, 1, 0xFF00, 1)];
     hidpad_found(NULL, kIOReturnSuccess, NULL, ref(ebd)); n = find(ebd);
-    assert(n && !(n->nin & PAD_NIN_SIMPLE) && !n->proto && !n->st.raw && n->st.map[2] == 5 && nouts == base);
+    assert(n && !(n->nin & PAD_NIN_SIMPLE) && !n->proto && n->st.layout == PAD_HID_DEFAULT && n->st.map[2] == 5 && nouts == base);
     hidpad_removed(NULL, kIOReturnSuccess, NULL, ref(ebd));
     // Lights are independent of full input mode: the subcommand channel alone shows its player, with no device-info handshake.
     TestDev *led = [TestDev new]; led.name = @"LED pad"; led.entry = 35;

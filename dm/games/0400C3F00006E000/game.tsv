@@ -19,7 +19,7 @@ package	v917504
 shader_versions	v0
 
 # ---- Files ----
-# The base game's subsdk0 is a Mono runtime (nn::ecli); 1.8.0's subsdk0 is the movie player and its subsdk1 a C library (1.8.0's build IDs read from the files of its NUP, 2026-11-13; the shader tables here are the base game's, so 1.8.0 is packed from a profile derived from this one for its own shaders).
+# The base game's subsdk0 is a Mono runtime (nn::ecli); 1.8.0's subsdk0 is the movie player and its subsdk1 a C library (1.8.0's build IDs match PR #1116 and PR #2621; the shader tables are the base game's, so 1.8.0 derives its own shaders even when v0 is also present).
 # Each build row names its own modules, and the host loads those of main's build (main.c profile_modules)
 modules	main subsdk0 subsdk1 sdk
 romfs_marker	Movie/StaffRoll_00.webm
