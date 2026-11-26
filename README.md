@@ -88,6 +88,7 @@ Because the same instruction set is on both ends, nothing simulates a CPU. That 
   instead of making them.
 - **One-command build and play**, with the settings, the icon and the seal handling baked in.
 - **The measurements.** Three builds, three runs each, each with its method, in [PERFORMANCE.md](PERFORMANCE.md).
+
 ## Requirements
 
 - An Apple silicon Mac. Measured on a MacBook Neo: A18 Pro, 8 GB, macOS 27.2.
@@ -169,6 +170,7 @@ shipped layout.
 - **Single player only.** No online and no local wireless.
 - **It gets smoother as you play.** 42.7 fps on the first run of a build and 51.6 on the third, and the difference is the
   pipeline cache filling, not the machine getting faster.
+
 ## History
 
 | When | What |
