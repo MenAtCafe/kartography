@@ -6,9 +6,9 @@ Mario Bros. Circuit, on the same machine, across three builds of this repository
 This is not a benchmark suite. It is a laptop playing a console game, measured honestly. Two methods appear here, and
 every table says which one it used, because they do not subtract from each other:
 
-- **Race windows**, 300 frames each, taken from inside a race. Used for the 14 November and 18 November builds.
-- **Display-link sessions**, a five-second summary at a time, from launch to quit, menus and loading included. Used from
-  26 November on, because it is what the host logs by itself.
+- **Race windows**, 300 frames each, taken from inside a race. Used for the 14 November build.
+- **Display-link sessions**, a five-second summary at a time, from launch to quit, menus and loading included. Used for
+  the 18 and 26 November builds, because it is what the host logs by itself.
 
 ## The current build, 26 November
 
