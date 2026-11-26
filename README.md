@@ -36,35 +36,27 @@ top of it: its profile, the fixes this game needs, a one-command build, and the 
 
 One course, Mario Bros. Circuit, on a MacBook Neo (Apple A18 Pro, 8 GB of unified memory, macOS 27.2).
 
-**The current build, 18 November: 52.2 fps mean over a race session, 49 frames over 100 ms, 4.49 GB peak footprint.**
+**The current build, 26 November: 51.6 fps mean over a race session, 71 frames over 100 ms, 4.33 GB peak footprint.**
 
-Three runs of this build, one race each, changing only the settings:
+Three runs of this build, one Grand Prix race each, the caches filling between them:
 
-| | First run | Second run | **Third run** |
+| | First run, cold | Second run | **Third run** |
 |---|---:|---:|---:|
-| Session mean | 44.1 fps | 47.2 fps | **52.2 fps** |
-| Mean after the menus | 42.4 fps | 47.1 fps | **52.6 fps** |
-| Five-second windows, median | about 43 fps | about 47.5 fps | **53.1 fps, best 60** |
-| Frames over 100 ms | 178 | 103 | **49** |
-| Display ticks spent holding | 29% | 22% | **12%** |
-| Peak footprint | 4.50 GB | 4.53 GB | **4.49 GB** |
+| Session mean | 42.7 fps | 49.7 fps | **51.6 fps** |
+| After the menus | 41.9 fps | 50.0 fps | **51.3 fps** |
+| Race windows, median | 44.1 | 51.0 | **52.6, best 57, worst 43** |
+| Frames over 100 ms | 139 | 85 | **71** |
+| Median long frame | 38.0 ms | 32.0 ms | **33.1 ms** |
+| Median GPU time | 16.6 ms | 13.0 ms | **13.1 ms** |
+| Peak footprint | 3.88 GB | 4.21 GB | **4.33 GB** |
 
-At full 1920x1080 with MetalFX scaling to the window. One setting separates each run: the second turns the upload gate
-off, the third turns the clock keeper off as well, and both are the defaults now. The keeper is off because on this chip it
-spins work the frames need more than the clock it buys; the gate is off because the GPU upload path measured faster. A
-fourth run with the same settings measured 45.7 fps while the machine was busy and warm, which is what a fanless laptop
-does after an hour of play, and it is reported rather than hidden.
+At full 1920x1080 with MetalFX scaling to the window. The first run's higher GPU time is the cache filling: once the
+pipelines are made, the same scene costs 13.0 ms against 14.3 ms on the 18 November build.
 
-The **14 November build this replaces** measured 58.3 fps on its third run, 55.2 on its second and 46.7 on its first,
-taken over 300-frame windows of a race. That method leaves menus and loading out, so it does not subtract from the table
-above; on race windows alone the new build sits at a median of 53.1 against that 58.3, and it is written that way here
-because the new build is not faster than the old one yet. What it is, is steadier: fewer frames over 100 ms and half the
-display ticks spent holding.
-
-The difference between those three old runs was the pipeline cache and nothing else: the first had none and compiled its
-way round the course, the third had 1,283 pipelines in it and compiled nothing for the first six windows of the race.
-[PERFORMANCE.md](PERFORMANCE.md) has both methods, the windows, the stutters, the comparison against the 1.0.0 dump, and
-an honest list of what is still unmeasured.
+Against that build the third run is 51.6 against 52.2 on the session mean and 52.6 against 53.1 on race windows, level within
+a run's noise. Memory is where the refresh shows: 4.33 GB at the peak against 4.49, and a median of 3.89 against 4.22.
+[PERFORMANCE.md](PERFORMANCE.md) has all three builds' methods, the windows, the stutters, the comparison against the 1.0.0
+dump, and an honest list of what is still unmeasured.
 ## How it works
 
 Three layers, stacked:

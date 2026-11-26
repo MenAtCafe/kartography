@@ -31,26 +31,26 @@ On our side the upload ring was removed rather than left switched off. It crashe
 guest pages, and porting it into upstream's rewritten upload path would have carried a known fault forward. Its profile
 key and its documentation row went with it.
 
-**Two runs, 26 November**, one Grand Prix race on Mario Bros. Circuit:
+**Three runs, 26 November**, one Grand Prix race on Mario Bros. Circuit, the caches warm from the second on:
 
-| | First run, cold cache | **Second run, warm** |
-|---|---:|---:|
-| Session mean | 42.7 fps | **49.7 fps** |
-| After the menus | 41.9 fps | **50.0 fps** |
-| Race windows, median | 44.1 | **51.0, best 59, worst 39** |
-| Frames over 100 ms | 139 | **85** |
-| Median long frame | 38.0 ms | **32.0 ms** |
-| Median GPU time | 16.6 ms | **13.0 ms** |
-| Peak footprint | 3.88 GB | 4.21 GB |
+| | First run, cold | Second run | **Third run** |
+|---|---:|---:|---:|
+| Session mean | 42.7 fps | 49.7 fps | **51.6 fps** |
+| After the menus | 41.9 fps | 50.0 fps | **51.3 fps** |
+| Race windows, median | 44.1 | 51.0 | **52.6, best 57, worst 43** |
+| Frames over 100 ms | 139 | 85 | **71** |
+| Median long frame | 38.0 ms | 32.0 ms | **33.1 ms** |
+| Median GPU time | 16.6 ms | 13.0 ms | **13.1 ms** |
+| Peak footprint | 3.88 GB | 4.21 GB | **4.33 GB** |
 
-The cold run's higher GPU time was the cache filling, not the chain: with the pipelines in place the same scene takes 13.0 ms,
-against 14.3 ms on the 18 November build.
+The step from the first run to the second is the cache: 16.6 ms of GPU time becomes 13.0 once the pipelines are made, and
+that is 1.3 ms under the 14.3 of the 18 November build on the same scene.
 
-Against that build the warm run is 49.7 against 52.2 on the session mean and 51.0 against 53.1 on race windows, so this
-refresh has not made it faster. It has made it lighter: 3.9 to 4.2 GB against 4.5.
+Against that build, the third run is 51.6 against 52.2 on the session mean and 52.6 against 53.1 on race windows, which is
+level within a run's noise. What moved is memory, 4.33 GB at the peak against 4.49, with a median of 3.89 against 4.22.
 
-What is left is the scene cut, and also the interval flips. Two frames of 400 to 470 ms in the second run carried no
-pipelines and no uploads at all, while the 700 to 800 ms ones carried 131 and 147 MB of texture uploads in a single frame.
+The worst frame is now 704 ms, at 10.7 seconds, which is the fullscreen switch at boot. The rest of the big ones are 350 to
+444 ms, and the scene cuts still carry 130 to 150 MB of texture uploads in a single frame.
 ## 18 November: the refresh onto nxnative main
 
 The build above was measured on 14 November, on nxnative main `4b10c73f`. The repository has since been brought onto
