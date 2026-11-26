@@ -31,23 +31,26 @@ On our side the upload ring was removed rather than left switched off. It crashe
 guest pages, and porting it into upstream's rewritten upload path would have carried a known fault forward. Its profile
 key and its documentation row went with it.
 
-**First run, 26 November**, one Grand Prix race on Mario Bros. Circuit, cold cache:
+**Two runs, 26 November**, one Grand Prix race on Mario Bros. Circuit:
 
-| | |
-|---|---:|
-| Session mean | 42.7 fps over 239 s |
-| After the menus | 41.9 fps |
-| Race windows | 60, 60, 60 at the start, then 28 to 47, median **44.1** |
-| Frames over 100 ms | 139 |
-| Worst frame | 3.5 s, a cold cache still building pipelines |
-| Median long frame | 38.0 ms |
-| Median GPU time | 16.6 ms, against 14.3 on the 18 November build |
-| Peak footprint | **3.88 GB**, against 4.49 |
+| | First run, cold cache | **Second run, warm** |
+|---|---:|---:|
+| Session mean | 42.7 fps | **49.7 fps** |
+| After the menus | 41.9 fps | **50.0 fps** |
+| Race windows, median | 44.1 | **51.0, best 59, worst 39** |
+| Frames over 100 ms | 139 | **85** |
+| Median long frame | 38.0 ms | **32.0 ms** |
+| Median GPU time | 16.6 ms | **13.0 ms** |
+| Peak footprint | 3.88 GB | 4.21 GB |
 
-That is not faster than the 18 November build, and the GPU time being higher is the more interesting number: it suggests the
-new shader chain costs more on this chip than the old one, not that our settings changed. What did improve is memory, by
-600 MB at the peak. One cold run is not enough to settle either, and a warm second run is the next thing to take.
+The cold run's higher GPU time was the cache filling, not the chain: with the pipelines in place the same scene takes 13.0 ms,
+against 14.3 ms on the 18 November build.
 
+Against that build the warm run is 49.7 against 52.2 on the session mean and 51.0 against 53.1 on race windows, so this
+refresh has not made it faster. It has made it lighter: 3.9 to 4.2 GB against 4.5.
+
+What is left is the scene cut, and also the interval flips. Two frames of 400 to 470 ms in the second run carried no
+pipelines and no uploads at all, while the 700 to 800 ms ones carried 131 and 147 MB of texture uploads in a single frame.
 ## 18 November: the refresh onto nxnative main
 
 The build above was measured on 14 November, on nxnative main `4b10c73f`. The repository has since been brought onto
