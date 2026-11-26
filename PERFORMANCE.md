@@ -7,6 +7,32 @@ Three runs on 1.8.0 and, for comparison, three on the 1.0.0 dump. One course, Ma
 is not a benchmark suite. It is a laptop playing a console game, measured honestly, and it is the best evidence there is
 right now that the port is in good shape.
 
+## 26 November: the second refresh
+
+nxnative main moved 527 commits between 18 and 26 November and this build carries them. The shader chain moved again,
+`7a2020f13431` to `3ed4ea8baaaa`, so every shader and the pipeline archive were rebuilt from scratch.
+
+What those commits bring that should matter here, with the numbers their authors measured:
+
+| Fix | Commit | Their measurement |
+|---|---|---|
+| Pipeline archive writes during play are deferred instead of timed on the spot | `f539b2dc` | 609 ms to 158 and 91 ms |
+| Sparse tile uploads reuse the row copier | `99224562` | 468 ms to 281-283 ms on warm launches |
+| Uncompressed alias bookkeeping made incremental | `cea11c7d` | 5.5 ms, 60 fps held |
+| The replay caches view type and pixel format per texture registration | `c7e74a1f` | 0.8 to 3.2% of submit time |
+| Stalled acquire threads retired to standard policy | `7e7e55fd` | pacing |
+| The 30-frame average leaves out its longest frame; a scene that fits hold 1 is tried to 0.95 vsyncs | `edc07d34`, `293b1d4d` | frame step |
+| 1.8.0 registered upstream, with the same build row this profile already carried | `ee63b843` | |
+
+Two of those aim at what this machine still shows. A 609 ms archive write and a 468 ms sparse tile load are the same
+shape as the 745 ms frame carrying 792 texture uploads seen on 18 November.
+
+On our side the upload ring was removed rather than left switched off. It crashed twice, both times in a direct copy of
+guest pages, and porting it into upstream's rewritten upload path would have carried a known fault forward. Its profile
+key and its documentation row went with it.
+
+**Not measured yet.** The first run after this refresh is what will say whether the frame rate and the stalls moved; until
+then this section lists what was brought in, not what it did.
 ## 18 November: the refresh onto nxnative main
 
 The build above was measured on 14 November, on nxnative main `4b10c73f`. The repository has since been brought onto

@@ -89,7 +89,7 @@ Because the same instruction set is on both ends, nothing simulates a CPU. That 
 - **Two ideas from [no-lag-kart](https://github.com/kingbumi31/no-lag-kart), measured and not kept.** A GPU clock
   keeper, which spins work on the GPU to hold its clock up: it gains on a 16 GB M2 Pro, and here it cost 5 fps (47.2
   against 52.6) and held twice as many display ticks, so the profile sets `gpu_keep off`. An upload source ring, which
-  is unproven and crashed twice in testing, so `DM_NVN_UP_COPY` stays at 0. Neither is a win on this machine.
+  crashed twice in testing and was removed rather than shipped switched off. Neither is a win on this machine.
 - **File-backed uploads on the GPU path.** That one is ours, and it works: the shipped settings leave the CPU gate off
   (`DM_GUEST_FILE_CPU_UP=0`), worth 3 fps and nearly half the frames over 100 ms.
 - **A pipeline archive built at build time** for this Mac's GPU: 9,591 render pipelines and 728 compute ones, so a first
@@ -181,7 +181,8 @@ shipped layout.
 |---|---|
 | Early November 2026 | Bring-up on the 1.0.0 dump, starting from [plumber-racer-2](https://github.com/cheemu21/plumber-racer-2). 27 to 32 fps at 1920x1080. |
 | Mid November | 1.8.0 registered in the profile, guest memory moved into sparse files so an 8 GB Mac stops swapping, and a pipeline archive built for this GPU. Three runs: 46.7, 55.2, 58.3 fps. The repository is renamed Kartography, and the keyboard map goes upstream as [PR #1535](https://github.com/seedds/nxnative/pull/1535). |
-| 18 November | Refreshed onto nxnative main, 254 commits later. Two settings from another fork were measured and settled here: the GPU clock keeper costs 5 fps on this chip and ships off, the CPU upload gate costs 3 fps and ships off. An upload ring was ported and left off, unproven. Session means after the refresh: 52.2 fps, 49 frames over 100 ms, 4.49 GB peak. |
+| 18 November | Refreshed onto nxnative main, 254 commits later. Two settings from another fork were measured and settled here: the GPU clock keeper costs 5 fps on this chip and ships off, the CPU upload gate costs 3 fps and ships off. Session means after the refresh: 52.2 fps, 49 frames over 100 ms, 4.49 GB peak. |
+| 26 November | Refreshed again, 527 commits on. The shader chain moved, so every shader and the archive were rebuilt. The upload ring was dropped after two crashes. Upstream now registers 1.8.0 itself, and brings fixes for archive writes during play, sparse tile uploads and the replay's texture registrations, listed in PERFORMANCE.md. |
 
 Every number above has its method in [PERFORMANCE.md](PERFORMANCE.md), including the ones that do not compare with each other.
 
