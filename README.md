@@ -72,8 +72,10 @@ Because the same instruction set is on both ends, nothing simulates a CPU. That 
 
 ## What this repository adds
 
-- **A keyboard map.** `DM_KBD_MAP` and nothing hardcoded: 25 actions, one line, sent upstream as
-  [PR #1535](https://github.com/seedds/nxnative/pull/1535).
+- **A keyboard map.** `DM_KBD_MAP` and nothing hardcoded: 25 actions, one line, and 44 checks behind it. Proposed
+  upstream as [PR #1535](https://github.com/seedds/nxnative/pull/1535); upstream closed it in favour of
+  [PR #3141](https://github.com/seedds/nxnative/pull/3141), a general controls file, so the map stays here until that
+  lands.
 - **1.8.0 as the package.** Upstream registers the build now too; this profile packs 1.8.0 unless you say otherwise, and
   the 1.0.0 dump is kept for comparison.
 - **Guest memory in files.** The guest block lives in sparse, unlinked 1 GB files, out of the footprint: 3.9 to 4.3 GB
