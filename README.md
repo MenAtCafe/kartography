@@ -74,20 +74,20 @@ Because the same instruction set is on both ends, nothing simulates a CPU. That 
 
 - **A keyboard map.** `DM_KBD_MAP` and nothing hardcoded: 25 actions, one line, sent upstream as
   [PR #1535](https://github.com/seedds/nxnative/pull/1535).
-- **1.8.0's build registered** in the game profile, so the update packs with this profile's settings and every fix for its
-  builds rather than as an unknown version.
-- **Guest memory in files.** The 72.5 GB guest block lives in 73 sparse, unlinked 1 GB files, out of the footprint, which is
-  what makes an 8 GB machine viable.
-- **Two ideas from [no-lag-kart](https://github.com/kingbumi31/no-lag-kart), measured and not kept.** A GPU clock
-  keeper, which spins work on the GPU to hold its clock up: it gains on a 16 GB M2 Pro, and here it cost 5 fps (47.2
-  against 52.6) and held twice as many display ticks, so the profile sets `gpu_keep off`. An upload source ring, which
-  crashed twice in testing and was removed rather than shipped switched off. Neither is a win on this machine.
-- **File-backed uploads on the GPU path.** That one is ours, and it works: the shipped settings leave the CPU gate off
-  (`DM_GUEST_FILE_CPU_UP=0`), worth 3 fps and nearly half the frames over 100 ms.
-- **A pipeline archive built at build time** for this Mac's GPU: 9,591 render pipelines and 728 compute ones, so a first
-  race compiles dozens rather than thousands.
+- **1.8.0 as the package.** Upstream registers the build now too; this profile packs 1.8.0 unless you say otherwise, and
+  the 1.0.0 dump is kept for comparison.
+- **Guest memory in files.** The guest block lives in sparse, unlinked 1 GB files, out of the footprint: 3.9 to 4.3 GB
+  in a race, which is what makes an 8 GB machine viable.
+- **File-backed uploads on the GPU path.** The CPU deswizzle gate is kept, and the shipped settings leave it off
+  (`DM_GUEST_FILE_CPU_UP=0`): worth 3 fps and nearly half the frames over 100 ms.
+- **A render scale stub for the 1.0.0 build**, which scales its 3D resolution table. The 1.8.0 build does not need it.
+- **Two ideas from [no-lag-kart](https://github.com/kingbumi31/no-lag-kart), measured and not kept.** A GPU clock keeper,
+  which gains on a 16 GB M2 Pro and costs 5 fps here, so the profile sets `gpu_keep off`; and an upload source ring,
+  which crashed twice and was removed rather than shipped switched off.
+- **A pipeline archive built at build time** for this Mac's GPU, 919 MB, so a first race opens compiled pipelines
+  instead of making them.
 - **One-command build and play**, with the settings, the icon and the seal handling baked in.
-
+- **The measurements.** Three builds, three runs each, each with its method, in [PERFORMANCE.md](PERFORMANCE.md).
 ## Requirements
 
 - An Apple silicon Mac. Measured on a MacBook Neo: A18 Pro, 8 GB, macOS 27.2.
@@ -158,15 +158,17 @@ shipped layout.
 - **One course measured.** Mario Bros. Circuit, first track in the game. Heavier tracks are untested.
 - **Tested on one Mac.** An Apple A18 Pro with 8 GB. Nothing from the M1 to the M6, base or Pro, has been run here, and
   those chips may show graphical issues: the flickering scenery reported on M-series Macs is still open upstream.
-- **One shader does not translate.** 11,602 of 11,603 compile; the missing one uses an Ampere instruction that is not
+- **One shader does not translate.** 11,600 of 11,601 compile; the missing one uses an Ampere instruction that is not
   implemented yet.
+- **Scene cuts stall.** A frame costs 350 to 444 ms when 130 to 150 MB of textures arrive at once, such as the cut into a
+  race. The worst frame of a session is 704 ms at boot, when the window goes fullscreen.
+- **The present interval flips.** The game switches its interval when it cannot hold 60, and frames of 400 ms and more
+  turn up with no pipeline, no upload and no GPU time inside them.
 - **Two diagnostics repeat once per run**, a slow-path texture upload and one texture type mismatch. Neither has cost a
   frame that we can see.
-- **Some frames stall for no accounted reason.** 300 to 400 ms with no pipeline, no upload and no GPU time inside them.
-  Open.
 - **Single player only.** No online and no local wireless.
-- **It gets smoother as you play.** Pipelines compile on first sight and are kept.
-
+- **It gets smoother as you play.** 42.7 fps on the first run of a build and 51.6 on the third, and the difference is the
+  pipeline cache filling, not the machine getting faster.
 ## History
 
 | When | What |
