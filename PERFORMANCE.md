@@ -31,8 +31,23 @@ On our side the upload ring was removed rather than left switched off. It crashe
 guest pages, and porting it into upstream's rewritten upload path would have carried a known fault forward. Its profile
 key and its documentation row went with it.
 
-**Not measured yet.** The first run after this refresh is what will say whether the frame rate and the stalls moved; until
-then this section lists what was brought in, not what it did.
+**First run, 26 November**, one Grand Prix race on Mario Bros. Circuit, cold cache:
+
+| | |
+|---|---:|
+| Session mean | 42.7 fps over 239 s |
+| After the menus | 41.9 fps |
+| Race windows | 60, 60, 60 at the start, then 28 to 47, median **44.1** |
+| Frames over 100 ms | 139 |
+| Worst frame | 3.5 s, a cold cache still building pipelines |
+| Median long frame | 38.0 ms |
+| Median GPU time | 16.6 ms, against 14.3 on the 18 November build |
+| Peak footprint | **3.88 GB**, against 4.49 |
+
+That is not faster than the 18 November build, and the GPU time being higher is the more interesting number: it suggests the
+new shader chain costs more on this chip than the old one, not that our settings changed. What did improve is memory, by
+600 MB at the peak. One cold run is not enough to settle either, and a warm second run is the next thing to take.
+
 ## 18 November: the refresh onto nxnative main
 
 The build above was measured on 14 November, on nxnative main `4b10c73f`. The repository has since been brought onto
